@@ -8,4 +8,4 @@ experiments/
 **/safety_gymnasium.egg-info/
 
 # Don't ignore
-!./safety-gymnasium/SCOPIL/experiments/
+!/safety-gymnasium/SCOPIL/experiments/

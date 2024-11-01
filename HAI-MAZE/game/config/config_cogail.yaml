@@ -1,0 +1,90 @@
+game:
+    test_model: False # no training
+    checkpoint_name: ""
+    checkpoint_path: ""
+    load_checkpoint: False
+    with_human: False # An agent plays with a human
+    X_agent: True
+    Y_agent: True
+    verbose: True
+    save_data_for_plots: False
+    save_last: False # Save the last model instead of best. If it is True, 'save_constraints' and 'save_all' should be False. If 'save' is 'False', 'save_last' should also be 'False'.
+    save_constraints: True # Save the model with the lowest number of constraints in test. If it is True, 'save_last' and 'save_all' should be False. If 'save' is 'False', 'save_constraints' should also be 'False'.
+    save_all: False # Save and keep all models (i.e, after each epoch). Only applicable when 'SL_finetuning' is True. If it is True, 'save_last' and 'save_constraints' should be False. If 'save' is 'False', 'save_all' should also be 'False'.
+    goal: "left_down" # "left_down" "left_up" "right_down"
+    discrete: True # train_game_number board rotation velocity values
+    scaling_x: 'auto' # Options: 'auto' or float like 0.01
+    scaling_y: 'auto' # Options: 'auto' or float like 0.01
+
+    # 13 iterations corresponds to 0.2 sec duration in a laptop with AMD ryzen 7 4000 series processor.
+    # We need to explicitly define the number of environment updates during executing an action since
+    # each machine performs different number of iterations for a predefined time duration. In this way,
+    # we guarantee that the performance of agents will be consistent when running in different machines
+    # as well as when running with render=True/False
+    action_iterations: 5
+
+coGAIL:
+  gail_batch_size: 128 # GAIL batch size (i.e., batch size for Discriminator)
+  gail_epoch: 5
+  gail_warm_up_epoch: 50
+  gail_warm_up_num_episodes: 10
+  code_size: 2
+  hidden_size: 64 # For all networks
+  ppo_lr: 0.0003 # used in Adam optimizer
+  ppo_eps: 0.00001 # used in Adam optimizer
+  ppo_gamma: 0.99
+  ppo_gae_lambda: 0.95
+  ppo_entropy_coef: 0.0
+  ppo_value_loss_coef: 0.5
+  ppo_max_grad_norm: 0.5
+  ppo_clip_param: 0.2
+  ppo_epoch: 10
+  ppo_num_mini_batch: 32
+  num_rollouts_steps: 400 #6000 # number of rollout steps per episode
+  num_env_steps: 2000 #6000000 # total environment steps
+  bc_pretrain_steps: 1 #30
+  human_controls_axis: 'Y'
+  normalize_features: True
+  opt_robot_w_env_rewards: True
+  eps_constraint: 0.2
+  delta_constraint: 0.05
+  initial_lambda_constraint: 1.05
+  w_actor_critic_gradient_clipping: True
+
+  # Sparse:   +100: goal, -50: time out, -1/step
+  # Sparse_2: +10: goal, -1/step
+  # Dense:    +10: goal, -[(distance from goal)/(regularize factor)]
+  # Distance: +10: goal, -5: time out, -distance_from_goal/225: step (NOTE: maximum distance=450)
+  # In case of co-GAIL, reward is used only for evaluation, not for training.
+  reward_function: Distance
+
+  chkpt_dir: "cogail_exp"
+  expert_dataset_paths: ['/home/georgepap/PycharmProjects/HAI-MAZE_master/experiments/results_human_alone_sub1/tmp/human_alone_exp_subject1_1',
+                         '/home/georgepap/PycharmProjects/HAI-MAZE_master/experiments/results_human_alone_sub2/tmp/human_alone_exp_test1_1',
+                         '/home/georgepap/PycharmProjects/HAI-MAZE_master/experiments/results_human_alone_sub1_soft_violation_constraint_ball_not_below_the_hole/tmp/human_alone_exp_test1_1'
+                        ]
+
+Experiment:
+  log_interval: 5 #400  # print avg reward in the interval
+  max_timesteps_per_game: 200  # max timesteps per train_game_number
+  test_max_games: 10 #40  # print avg reward in the interval
+  test_max_timesteps_per_game: 200 # max steps per trial
+  render: False
+  test_every_games: 5 #400
+  constraint_ball_only_at_the_right_side_wrt_hole: False
+  constraint_ball_only_at_the_right_side_wrt_hole_x_coef: 1.6 # 2.
+  constraint_ball_only_at_the_up_side_wrt_hole: True
+  constraint_ball_only_at_the_up_side_wrt_hole_y_coef: 2.
+  constraint_ball_not_in_circle: False
+  constraint_ball_not_in_circle_circle_position: [ [ -90.0, -90.0 ], [ -140.0, -40.0 ], [ -10.0, -100.0 ], [ 0.0, 100.0 ], [ 60.0, 40.0 ], [ 100.0, 100.0 ], [ 140.0, -20.0 ] ]
+  constraint_ball_not_in_circle_circle_radius: [ 19.8398435, 19.8398435, 19.8398435, 19.8398435, 19.8398435, 19.8398435, 19.8398435 ]
+  satisfied_constraint_value: 1.0
+  not_satisfied_constraint_value: -10.0
+  test_window_size_moving_avg: 10
+  debug_: False
+  test_seed: 2023
+
+GUI:
+  start_up_screen_display_duration: 5 # the time in sec the set-up screen is being displayed
+  timeout_screen_display_duration: 3  # the time in sec the timeout screen is being displayed
+  goal_screen_display_duration: 3 # the time in sec the goal screen is being displayed

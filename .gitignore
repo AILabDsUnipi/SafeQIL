@@ -1,0 +1,7 @@
+.idea/
+**/.idea/
+experiments/
+**/__pycache__/
+**/.DS_Store
+**/results/
+**/safety_gymnasium.egg-info/

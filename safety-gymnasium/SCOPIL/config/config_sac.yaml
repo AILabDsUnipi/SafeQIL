@@ -1,0 +1,65 @@
+game:
+  env_id: "SafetyPointGoal1-v0"
+  test_model: False # if True, no training
+  load_checkpoint: False
+  checkpoint_path: "/home/georgepap/PycharmProjects/HAI-MAZE_master/safety-gymnasium/results/tmp/sac_single_agent_exp_train_sac_29/chkpts"
+  checkpoint_prefix: "lowest_constr"  # Options: "best_reward", "lowest_constr", "last"
+  with_human: False # One or two humans if True
+  save_data_for_plots: False
+  save_model: True
+  use_image_obs: False
+
+SAC:
+  layer1_size: 32  # number of variables in the first hidden layer
+  layer2_size: 32 # number of variables in the second hidden layer
+  log_std_init: -3.0
+  batch_size: 256
+  gamma: 0.99
+  tau: 0.005  # factor for polyak update of target networks
+  alpha: 0.0003 # actor lr
+  beta: 0.0003  # critic lr
+  target_entropy: "auto"  # "auto", "auto_<float>", or float. In continuous case, there is no 'target_entropy_ratio', as opposed to 0.4 in discrete case.
+  entropy_coefficient_lr: 0.0003  # In continuous case, the same lr with the networks is suggested, as opposed to 0.002 in discrete case.
+  target_update_interval: 1  # how many gradient steps of online networks to perform before updating the target networks.
+  use_sde: True  # Generalized State-Dependent Exploration
+  sde_sample_freq: -1
+  use_sde_at_warmup: False
+  start_steps: 300  # 10000 # how many steps to collect transitions before learning starts
+  num_steps: 4000 # 1000000 # Total environment steps. 'None' or integer. If 'None', specify 'n_episodes' or 'n_train_episodes'.
+  buffer_memory_size: 1000000
+  update_every_steps: 1  # Steps interval between two consecutive NN updates
+  gradient_steps: 1  # How many steps to perform when updating
+
+  # Constraint optimization
+  initial_lambda_constraint: 1.05
+  lambda_constraint_lr: 0.0003
+  w_constraint_optimization: True
+  w_dual_grad_desc: True
+  w_entropy_in_constraint_policy_loss_term: True
+  clip_grad_norm: False
+  max_grad_norm: 5
+  adjust_entropy: True
+
+  # Demonstrations
+  expert_dataset_path: '/home/georgepap/PycharmProjects/HAI-MAZE_master/experiments/safety_gymnasium/human_alone_exp_human_data_simple/tmp/human_alone_exp_human_data_simple_1/demonstrations'
+  load_demos_in_memory: True
+  scale_actions: True
+  scale_factor: 0.5
+
+  # Results
+  chkpt_dir: "sac_single_agent_exp"
+
+Experiment:
+  normalize_features: True
+  normalize_rewards: True
+  log_interval: 2 # 5  # print avg reward in the interval
+  max_timesteps_per_game: 1000  # max timesteps per episode in train mode
+  test_max_games: 5 # 40 # 5  # print avg test reward in the interval
+  test_max_timesteps_per_game: 1000  # max steps per episode in test mode
+  render: False
+  debug_: False
+  test_every_episodes: 2 # 5  # episodes interval between tests
+  test_window_size_moving_avg: 10
+  seed: None # 2024  # None or int
+  device: "cuda"  # "cuda" or "cpu"
+

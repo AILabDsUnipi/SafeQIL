@@ -1,0 +1,3 @@
+- Before running the environment, execute the following command:
+export MESA_GL_VERSION_OVERRIDE=3.3
+

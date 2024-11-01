@@ -1,0 +1,69 @@
+game:
+    test_model: True
+    # The first item of the below lists refers to single-axis-agent path (if both X_agent and Y_agent are used, then checkpoint is shared).
+    # The second item refers to X_Y_agent path.
+    checkpoint_name: ["",
+                      "ppo_single_agent_exp_w_upper_constr_and_w_circle_constr_w_icrl_w_norm_reward_range_-1_0_w_n_iters=40_w_constraint_net_2_layers_w_lr_0.0003_w_back_iters=20_w_back_n_rollouts=100_w_save_constraints_1"
+                     ]
+    checkpoint_path: ["",
+                      "./../experiments/ppo_single_agent_exp_w_upper_constr_and_w_circle_constr_w_icrl_w_norm_reward_range_-1_0_w_n_iters=40_w_constraint_net_2_layers_w_lr_0.0003_w_back_iters=20_w_back_n_rollouts=100_w_save_constraints/train_results/tmp/"
+                     ]
+    load_checkpoint: True
+    with_human: False # An agent plays with a human
+    X_agent: False
+    Y_agent: False
+    X_Y_agent: True # If true, 'X_agent' and 'Y_agent' should be False
+    X_Y_agent_pretrained: False # If true, 'X_Y_agent' should be False.
+                               # All models are pretrained, but we use this notation here to declare that
+                               # X_agent or Y_agent was trained using a pretrained X_Y_agent
+                               # (and thus both X_Y_agent and X/Y_agent should be loaded).
+    verbose: True
+    save_data_for_plots: True
+    save: True # save logs
+    goal: "left_down" # "left_down" "left_up" "right_down"
+    discrete: True # train_game_number board rotation velocity values
+    scaling_x: 'auto' # Options: 'auto' or float like 0.01
+    scaling_y: 'auto' # Options: 'auto' or float like 0.01
+
+    # 13 iterations corresponds to 0.2 sec duration in a laptop with AMD ryzen 7 4000 series processor.
+    # We need to explicitly define the number of environment updates during executing an action since
+    # each machine performs different number of iterations for a predefined time duration. In this way,
+    # we guarantee that the performance of agents will be consistent when running in different machines
+    # as well as when running with render=True/False
+    action_iterations: 5
+
+PPO:
+  layer1_size: 64  # number of variables in the first hidden layer
+  layer2_size: 64 # number of variables in the second hidden layer
+  normalize_features: True
+  ICRL: True
+  ICRL_constraint_net_layer1_size: 40
+  ICRL_constraint_net_layer2_size: 40 #None
+  lagrangian: False
+
+  # Distance: +10: goal, -5: time out, -distance_from_goal/225: step (NOTE: maximum distance=450)
+  reward_function: Distance
+
+  chkpt_dir: "ppo_single_agent"
+
+Experiment:
+  test_max_games: 40 #4  # print avg reward in the interval
+  test_max_timesteps_per_game: 200 # max steps per trial
+  render: False
+  constraint_ball_only_at_the_right_side_wrt_hole: False
+  constraint_ball_only_at_the_right_side_wrt_hole_x_coef: 1.6 # 2.
+  constraint_ball_only_at_the_up_side_wrt_hole: True
+  constraint_ball_only_at_the_up_side_wrt_hole_y_coef: 2.
+  constraint_ball_not_in_circle: True
+  constraint_ball_not_in_circle_circle_position: [ [ -90.0, -90.0 ] ] # [ [ -90.0, -90.0 ], [ -140.0, -40.0 ], [ -10.0, -100.0 ], [ 0.0, 100.0 ], [ 60.0, 40.0 ], [ 100.0, 100.0 ], [ 140.0, -20.0 ] ]
+  constraint_ball_not_in_circle_circle_radius: [ 19.8398435 ] # [ 19.8398435, 19.8398435, 19.8398435, 19.8398435, 19.8398435, 19.8398435, 19.8398435 ]
+  satisfied_constraint_value: 1.0
+  not_satisfied_constraint_value: -10.0
+  test_window_size_moving_avg: 10
+  debug_: False
+  test_seed: 2024 # 2023 or 2024
+
+GUI:
+  start_up_screen_display_duration: 5 # the time in sec the set-up screen is being displayed
+  timeout_screen_display_duration: 3  # the time in sec the timeout screen is being displayed
+  goal_screen_display_duration: 3 # the time in sec the goal screen is being displayed

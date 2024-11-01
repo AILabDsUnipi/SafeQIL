@@ -1,0 +1,106 @@
+game:
+    test_model: False # if TRUE, no training
+    # The first item of the below lists refers to single agent path (if both X_agent and Y_agent are used, then checkpoint is shared).
+    # The second item refers to X_Y_agent path.
+    checkpoint_name: [
+                      "",
+                      "sac_single_agent_exp_w_upper_constraint_and_w_circle_constraint_w_entropy_in_lagrangian_w_norm_reward_range_-1_0_1"
+                     ]
+    checkpoint_path: [
+                      "",
+                      "./../experiments/sac_single_agent_exp_w_upper_constraint_and_w_circle_constraint_w_entropy_in_lagrangian_w_norm_reward_range_-1_0_1/train_results/tmp/"
+                     ]
+    load_checkpoint: True
+    with_human: False # An agent plays with a human
+    X_agent: False
+    Y_agent: False
+    X_Y_agent: False # If true, 'X_agent' and 'Y_agent' should be False
+    X_Y_agent_pretrained: True # If true, 'X_Y_agent' should be False and 'load_checkpoint' should be True
+    verbose: True
+    save_data_for_plots: True
+    save: True # save models and logs. If 'save_last' is false, the models will be saved based on the test reward.
+    save_last: False # Save the last model instead of best. If it is True, 'save_constraints' and 'save_all' should be False. If 'save' is 'False', 'save_last' should also be 'False'.
+    save_constraints: True # Save the model with the lowest number of constraints in test. If it is True, 'save_last' and 'save_all' should be False. If 'save' is 'False', 'save_constraints' should also be 'False'.
+    save_all: False # Save and keep all models (i.e, after each epoch). Only applicable when 'SL_finetuning' is True. If it is True, 'save_last' and 'save_constraints' should be False. If 'save' is 'False', 'save_all' should also be 'False'.
+    goal: "left_down" # "left_down" "left_up" "right_down"
+    discrete: True # train_game_number board rotation velocity values
+    scaling_x: 'auto' # Options: 'auto' or float like 0.01
+    scaling_y: 'auto' # Options: 'auto' or float like 0.01
+
+    # 13 iterations corresponds to 0.2 sec duration in a laptop with AMD ryzen 7 4000 series processor.
+    # We need to explicitly define the number of environment updates during executing an action since
+    # each machine performs different number of iterations for a predefined time duration. In this way,
+    # we guarantee that the performance of agents will be consistent when running in different machines
+    # as well as when running with render=True/False
+    action_iterations: 5
+
+SAC:
+  layer1_size: 32  # number of variables in the first hidden layer
+  layer2_size: 32 # number of variables in the second hidden layer
+  batch_size: 256
+  gamma: 0.99  # discount factor
+  tau: 0.005  # factor for polyak update of target networks
+  alpha: 0.0003  # actor lr
+  beta: 0.0003  # critic lr
+  target_entropy_ratio: 0.4
+  entropy_coefficient_lr: 0.002
+  clip_grad_norm: False
+  max_grad_norm: 5
+  start_steps: 0 #50 #0 #1000 #10000  # how many steps of the model to collect transitions for before learning starts
+  num_steps: 100000 #500 #'None' #2000 #1000000 # Total environment steps. 'None' or integer. If 'None', specify 'n_episodes' or 'n_train_episodes'.
+  n_episodes: 'None' # 'None' # Number of episodes (games). 'None' or integer. If 'num_steps' or 'n_train_episodes' is an integer, 'n_episodes' should be 'None'.
+  n_train_episodes: 'None' #40 # Number of episodes (games) at which the networks are trained. 'None' or integer. If 'num_steps' or 'n_episodes' is an integer, 'n_train_episodes' should be 'None'.
+  buffer_memory_size: 1000000
+  updates_per_step: 1
+  normalize_features: True
+  initial_lambda_constraint: 1.05
+  lambda_constraint_lr: 0.0003
+  w_constraint_optimization: True
+  w_dual_grad_desc: True
+  w_entropy_in_constraint_policy_loss_term: True
+  SL_finetuning: False
+  SL_finetuning_epochs: 5
+  SL_finetuning_batch_size: 256
+  SL_finetuning_lr: 0.0003
+
+  # Sparse:   +100: goal, -50: time out, -1/step
+  # Sparse_2: +10: goal, -1/step
+  # Dense:    +10: goal, -[(distance from goal)/(regularize factor)]
+  # Distance: +10: goal, -5: time out, -distance_from_goal/225: step (NOTE: maximum distance=450)
+  reward_function: Distance
+
+  expert_dataset_paths: [
+    './../experiments/results_human_alone_sub1_no_violation_constraint_ball_not_below_the_hole_and_ball_not_in_circle/tmp/human_alone_exp_test_1',
+
+                        ]
+#  './../experiments/results_human_alone_sub1_single_traj_layout_3_fifth_row_bottom_1/tmp/human_alone_exp_test_1',
+#  './../experiments/results_human_alone_sub1_single_traj_layout_3_sixth_row_bottom_1/tmp/human_alone_exp_test_1',
+#  './../experiments/results_human_alone_sub1_single_traj_layout_10_up_right_1/tmp/human_alone_exp_test_1',
+  # './../experiments/results_human_alone_sub1_single_traj_layout_4_forth_row_up_1/tmp/human_alone_exp_test_1',
+  # './../experiments/results_human_alone_sub1_single_traj_layout_10_second_row_up_1/tmp/human_alone_exp_test_1',
+  chkpt_dir: "sac_single_agent_exp" #"sac_two_agents_exp"
+
+Experiment:
+  log_interval: 40  # print avg reward in the interval
+  max_timesteps_per_game: 20  # 200  # max timesteps per train_game_number
+  test_max_games: 40  # print avg reward in the interval
+  test_max_timesteps_per_game: 200  # max steps per trial
+  render: False
+  test_every_episodes: 40
+  constraint_ball_only_at_the_right_side_wrt_hole: False
+  constraint_ball_only_at_the_right_side_wrt_hole_x_coef: 1.6 # 2.
+  constraint_ball_only_at_the_up_side_wrt_hole: True
+  constraint_ball_only_at_the_up_side_wrt_hole_y_coef: 2.
+  constraint_ball_not_in_circle: True
+  constraint_ball_not_in_circle_circle_position: [ [ -90.0, -90.0 ] ] # [ [ -90.0, -90.0 ], [ -140.0, -40.0 ], [ -10.0, -100.0 ], [ 0.0, 100.0 ], [ 60.0, 40.0 ], [ 100.0, 100.0 ], [ 140.0, -20.0 ] ]
+  constraint_ball_not_in_circle_circle_radius: [ 19.8398435 ] # [ 19.8398435, 19.8398435, 19.8398435, 19.8398435, 19.8398435, 19.8398435, 19.8398435 ]
+  satisfied_constraint_value: 1.0
+  not_satisfied_constraint_value: -10.0
+  test_window_size_moving_avg: 10
+  debug_: False
+  test_seed: 2024 # integer (2023, 2024) or 'Seq'. 'Seq' means run the games with the predefined order of layouts
+
+GUI:
+  start_up_screen_display_duration: 5 # the time in sec the set-up screen is being displayed
+  timeout_screen_display_duration: 3  # the time in sec the timeout screen is being displayed
+  goal_screen_display_duration: 3 # the time in sec the goal screen is being displayed

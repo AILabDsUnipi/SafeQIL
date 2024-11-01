@@ -1,3 +1,4 @@
+# Ignore
 .idea/
 **/.idea/
 experiments/
@@ -5,3 +6,6 @@ experiments/
 **/.DS_Store
 **/results/
 **/safety_gymnasium.egg-info/
+
+# Don't ignore
+!./safety-gymnasium/SCOPIL/experiments/

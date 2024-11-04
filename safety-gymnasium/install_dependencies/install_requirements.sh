@@ -18,7 +18,7 @@ else
     conda install pytorch=1.13 cpuonly -c pytorch -y
 fi
 
-cd ../install_requirements/
+cd ./../install_dependencies/
 yes | pip install -r ./requirements.txt
 cd ..
 

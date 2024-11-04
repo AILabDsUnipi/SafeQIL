@@ -67,4 +67,4 @@ def render(vision_obs):
     # Show vision observations
     bgr_vision_obs = cv2.cvtColor(vision_obs, cv2.COLOR_RGB2BGR)
     cv2.imshow("agent view", bgr_vision_obs)
-    cv2.waitKey(100)
+    cv2.waitKey(10)

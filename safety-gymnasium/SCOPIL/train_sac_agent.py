@@ -22,7 +22,6 @@ def main(argv):
     # Check if the selected config file is suitable for the current experiment
     assert config["game"]["test_model"] is False
     assert config["game"]["with_human"] is False
-    assert config["Experiment"]["render"] is False
 
     ## Check other config settings
     # Check the consistency between 'log_interval' and 'test_every_episodes' consistency
@@ -40,6 +39,12 @@ def main(argv):
     assert not (
             config['SAC']['w_entropy_in_constraint_policy_loss_term'] is True and
             config['SAC']['w_dual_grad_desc'] is False
+    )
+    # Check the consistency between 'w_entropy_in_constraint_policy_loss_term' and 'adjust_entropy'
+    assert not (
+            config['SAC']['adjust_entropy'] is True and
+            config['SAC']['w_entropy_in_constraint_policy_loss_term'] is False
+
     )
 
     # Create the environment

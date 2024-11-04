@@ -370,7 +370,7 @@ class StateDependentNoiseDistribution(Distribution):
         :return:
         """
         if self.use_expln:
-            # From gSDE paper, it allows to keep variance
+            # From gSDE paper, it allows keeping variance
             # above zero and prevent it from growing too fast
             below_threshold = th.exp(log_std) * (log_std <= 0)
             # Avoid NaN: zeros values that are below zero

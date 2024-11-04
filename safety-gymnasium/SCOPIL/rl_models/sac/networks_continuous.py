@@ -656,6 +656,11 @@ class BasePolicy(BaseModel, ABC):
             self.action_space, spaces.Box
         ), f"Trying to scale an action using an action space that is not a Box(): {self.action_space}"
         low, high = self.action_space.low, self.action_space.high
+
+        if isinstance(action, th.Tensor):
+            low = th.from_numpy(low).to(th.float32).to(action.device)
+            high = th.from_numpy(high).to(th.float32).to(action.device)
+
         return 2.0 * ((action - low) / (high - low)) - 1.0
 
     def unscale_action(self, scaled_action: np.ndarray) -> np.ndarray:

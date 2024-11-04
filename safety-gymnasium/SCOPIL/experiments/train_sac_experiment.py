@@ -77,9 +77,7 @@ class SACExperiment(TrainExperiment):
             while not self.done:
 
                 # Get action
-                action, buffer_action = self.agent.sample_action(
-                    self.normalize_features_func(self.observation), self.total_steps
-                )
+                action, buffer_action = self.agent.sample_action(self.observation, self.total_steps)
 
                 # Environment step
                 self.next_observation, self.reward, self.cost, self.done, self.truncated, self.info = \
@@ -319,7 +317,8 @@ class SACExperiment(TrainExperiment):
         :param obs: np.array, observation of the agent
         :return: np.array, action
         """
-        return self.agent.predict(self.normalize_features_func(obs), deterministic=True)
+
+        return self.agent.predict(obs, deterministic=True)
 
     def save_agent_models(self, prefix_model_name):
         """

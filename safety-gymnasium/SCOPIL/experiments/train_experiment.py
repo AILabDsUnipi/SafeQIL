@@ -7,7 +7,7 @@ import numpy as np
 import torch as th
 
 from .base_experiment import BaseExperiment
-from SCOPIL.utils.env_utils import get_cost_sum_from_info_dict
+from SCOPIL.utils.env_utils import get_cost_sum_from_info_dict, render
 from SCOPIL.utils.exp_utils import test_print_logs
 from SCOPIL.utils.demonstration_utils import min_max_obs_values, min_max_rew_values
 
@@ -32,6 +32,7 @@ class TrainExperiment(BaseExperiment):
         self.test_every_episodes = config['Experiment']['test_every_episodes']
         self.save_model = self.config['game']['save_model']
         self.use_image_obs = self.config['game']['use_image_obs']
+        self.render = self.config['Experiment']['render']
 
         # Initialize lists to keep track of information and variables during training
         self.episodes_model_saved = {'last': [], 'best_reward': [], 'lowest_constr': []}
@@ -452,7 +453,13 @@ class TrainExperiment(BaseExperiment):
         :return: Next observation, reward, cost, done, info
         """
 
+        # Step
         next_obs, reward, cost, done, truncated, info = self.env.step(action)
+
+        # Rendering
+        if self.render is True:
+            vision_obs = self.env.render()
+            render(vision_obs)
 
         return self.normalize_features_func(next_obs), self.normalize_rewards_func(reward), cost, done, truncated, info
 

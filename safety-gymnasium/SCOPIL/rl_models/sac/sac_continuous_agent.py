@@ -229,6 +229,7 @@ class SAC(ABC):
                 # Define torch dataset for demonstrations
                 expert_dataset = ExpertDataset(
                     self.config['SAC']['expert_dataset_path'],
+                    device=self.device,
                     use_images=self.use_image_obs,
                     load_to_memory=self.config['SAC']['load_demos_in_memory'],
                     env_id=self.config['game']['env_id'],

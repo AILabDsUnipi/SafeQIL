@@ -20,11 +20,11 @@ class BaseExperiment:
         # retrieve parameters
         self.config = config  # configuration file dictionary
         self.env = environment  # environment to play in
-        self.test_model = config['game']['test_model']  # check if only test
+        self.test_model = config['Experiment']['test_model']  # check if only test
         if self.agent is not None:
-            self.load_checkpoint = config['game']['load_checkpoint']
-            self.checkpoint_path = config['game']['checkpoint_path']
-            self.checkpoint_prefix = config['game']['checkpoint_prefix']
+            self.load_checkpoint = config['Experiment']['load_checkpoint']
+            self.checkpoint_path = config['Experiment']['checkpoint_path']
+            self.checkpoint_prefix = config['Experiment']['checkpoint_prefix']
 
         # Retrieve information from the config file only for test
         self.debug_ = config['Experiment']['debug_']

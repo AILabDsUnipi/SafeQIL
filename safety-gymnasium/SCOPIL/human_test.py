@@ -19,7 +19,7 @@ def main(argv):
     config = get_config(argv[0])
 
     # Check if the selected config file is suitable for the current experiment
-    assert config["game"]["test_model"] is True
+    assert config["Experiment"]["test_model"] is True
     assert config["game"]["with_human"] is True
     assert config["Experiment"]["render_mode"] == "human", "When human plays, the 'render_mode' should be 'human' !"
     assert config["Experiment"]["render"] is True

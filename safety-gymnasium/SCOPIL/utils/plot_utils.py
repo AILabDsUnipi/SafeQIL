@@ -177,6 +177,44 @@ def save_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plots=Fa
         ).to_csv(
             os.path.join(files_dir, 'constraint_lambda_avg_per_log_interval.csv'), index=False
         )
+        if experiment.pretrain is True:
+            pd.DataFrame(
+                experiment.pretrain_mse_losses,
+                columns=['Pretrain MSE Loss']
+            ).to_csv(
+                os.path.join(files_dir, 'pretrain_mse_loss.csv'), index=False
+            )
+            pd.DataFrame(
+                experiment.pretrain_nll_losses,
+                columns=['Pretrain NLL Loss']
+            ).to_csv(
+                os.path.join(files_dir, 'pretrain_nll_loss.csv'), index=False
+            )
+            pd.DataFrame(
+                experiment.pretrain_losses,
+                columns=['Pretrain Loss']
+            ).to_csv(
+                os.path.join(files_dir, 'pretrain_loss.csv'), index=False
+            )
+            pd.DataFrame(
+                experiment.pretrain_log_probs,
+                columns=['Pretrain Log Probs']
+            ).to_csv(
+                os.path.join(files_dir, 'pretrain_log_probs.csv'), index=False
+            )
+            pd.DataFrame(
+                experiment.pretrain_probs,
+                columns=['Pretrain Probs']
+            ).to_csv(
+                os.path.join(files_dir, 'pretrain_probs.csv'), index=False
+            )
+            if experiment.clip_grad_norm is True:
+                pd.DataFrame(
+                    experiment.pretrain_grad_norms_clipped,
+                    columns=['Pretrain Gradient Norms Clipped']
+                ).to_csv(
+                    os.path.join(files_dir, 'pretrain_grad_norms_clipped.csv'), index=False
+                )
     for model_type in experiment.episodes_model_saved:
         pd.DataFrame(
             experiment.episodes_model_saved[model_type],
@@ -446,6 +484,55 @@ def save_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plots=Fa
             data_for_plots_to_return[file_title + "_per_log_interval"] = [
                 x_label, x_axis, plot_ylabel, plot_title, data
             ]
+
+    if experiment.pretrain is True:
+        # Check the consistency of pretraining lists
+        assert len(experiment.pretrain_mse_losses) == \
+               len(experiment.pretrain_nll_losses) == \
+               len(experiment.pretrain_losses) == \
+               len(experiment.pretrain_log_probs) == \
+               len(experiment.pretrain_probs), \
+            "Inconsistency among pretraining lists."
+        if experiment.clip_grad_norm is True:
+            assert len(experiment.pretrain_mse_losses) == \
+                   len(experiment.pretrain_grad_norms_clipped), \
+                "Inconsistency for pretraining gradient norm clipped list."
+
+        # Plot pretraining metrics.
+        # The first element of each tuple is the ylabel,
+        # the second is the plot title,
+        # the third is the data to plot, and
+        # the forth is the title of the file to be written.
+        data_to_plot_train = [
+            ('Loss', 'MSE Loss', experiment.pretrain_mse_losses, 'pretrain_mse_loss'),
+            ('Loss', 'NLL Loss', experiment.pretrain_nll_losses, 'pretrain_nll_loss'),
+            ('Loss', 'Loss', experiment.pretrain_losses, 'pretrain_loss'),
+            ('Value', 'Log Probs', experiment.pretrain_log_probs, 'pretrain_log_probs'),
+            ('Value', 'Probs', experiment.pretrain_probs, 'pretrain_probs')
+        ]
+        if experiment.clip_grad_norm is True:
+            data_to_plot_train += [
+                (
+                    'Value',
+                    'Gradient norm clipped',
+                    experiment.pretrain_grad_norms_clipped,
+                    'pretrain_grad_norms_clipped'
+                )
+            ]
+        x_axis = [(i + 1) for i in range(len(experiment.pretrain_mse_losses))]
+        for (plot_ylabel, plot_title, data, file_title) in data_to_plot_train:
+            x_label = 'Epochs'
+            plt.figure()
+            plt.xlabel(x_label)
+            plt.ylabel(plot_ylabel)
+            plt.title(plot_title)
+            plt.plot(x_axis, data)
+            plt.savefig(os.path.join(plot_dir, file_title + ".png"))
+            plt.close()
+            if return_data_for_plots is True:
+                data_for_plots_to_return[file_title] = [
+                    x_label, x_axis, plot_ylabel, plot_title, data
+                ]
 
     print(f"Logs and plots saved in '{files_dir}' and '{plot_dir}' successfully!")
 

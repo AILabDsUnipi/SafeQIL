@@ -104,8 +104,8 @@ class ExpertDataset(Dataset):
             load_to_memory=False,
             env_id=None,
             normalize_features=False,
-            scale_actions=False,
-            scale_factor=0.9
+            smooth_actions=False,
+            smooth_factor=0.9
     ):
 
         self.directory = directory
@@ -114,8 +114,8 @@ class ExpertDataset(Dataset):
         self.load_to_memory = load_to_memory
         self.env_id = env_id
         self.normalize_features = normalize_features
-        self.scale_actions = scale_actions
-        self.scale_factor = scale_factor
+        self.smooth_actions = smooth_actions
+        self.smooth_factor = smooth_factor
 
         self.idx_to_file_and_step = []
         self.data_store = {}
@@ -139,24 +139,24 @@ class ExpertDataset(Dataset):
                             self.data_store[filepath]['vector_obs'] = self.loaded_normalize_features_func(
                                 data['vector_obs']
                             )
-                            self.data_store[filepath]['actions'] = self.loaded_scale_actions_func(
+                            self.data_store[filepath]['actions'] = self.loaded_smooth_actions_func(
                                 data['actions']
                             )
                     for step in data['actions'][episode].keys():  # Assuming all keys are the same across the dicts
                         self.idx_to_file_and_step.append((filepath, episode, step))
         print("{} samples were mapped successfully!".format(len(self.idx_to_file_and_step)))
 
-    def scale_actions_func(self, actions):
-        if self.scale_actions is True:
-            actions = actions * self.scale_factor
+    def smooth_actions_func(self, actions):
+        if self.smooth_actions is True:
+            actions = actions * self.smooth_factor
 
         return actions
 
-    def loaded_scale_actions_func(self, actions):
-        if self.scale_actions is True:
+    def loaded_smooth_actions_func(self, actions):
+        if self.smooth_actions is True:
             for ep_key, ep_value in actions.items():  # Episode loop
                 for st_key, st_value in ep_value.items():  # Step loop
-                    actions[ep_key][st_key] = self.scale_actions_func(st_value)
+                    actions[ep_key][st_key] = self.smooth_actions_func(st_value)
 
         return actions
 
@@ -190,7 +190,7 @@ class ExpertDataset(Dataset):
         actions = data['actions'][episode][step_key]
         if self.load_to_memory is False:
             # When data are not loaded in memory should be scaled
-            actions = self.scale_actions_func(actions)
+            actions = self.smooth_actions_func(actions)
 
         if self.use_images is True:
             observations = data['vision_obs'][episode][step_key]
@@ -217,8 +217,8 @@ if __name__ == '__main__':
         load_to_memory=True,
         env_id="SafetyPointGoal1-v0",
         normalize_features=True,
-        scale_actions=False,
-        scale_factor=0.9
+        smooth_actions=False,
+        smooth_factor=0.9
     )
     loader = th.utils.data.DataLoader(dataset, batch_size=10, shuffle=True)
 

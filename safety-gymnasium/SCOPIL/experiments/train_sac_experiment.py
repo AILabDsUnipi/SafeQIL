@@ -1,4 +1,5 @@
 import itertools
+from typing import List
 
 import numpy as np
 
@@ -27,6 +28,7 @@ class SACExperiment(TrainExperiment):
         self.sde_sample_freq = config['SAC']['sde_sample_freq']
         self.w_constraint_optimization = config['SAC']['w_constraint_optimization']
         self.clip_grad_norm = config['SAC']['clip_grad_norm']
+        self.pretrain = config['SAC']['pretrain']
 
         # Initialize lists to keep track of information and variables during training
         self.i_train_episode = 0
@@ -59,11 +61,23 @@ class SACExperiment(TrainExperiment):
             self.constraint_lambda_loss_value_avg_per_log_interval = []
             self.policy_loss_value_wo_constraint_term_avg_per_log_interval = []
             self.constraint_lambda_avg_per_log_interval = []
+            if self.pretrain is True:
+                self.pretrain_mse_losses = []
+                self.pretrain_nll_losses = []
+                self.pretrain_losses = []
+                self.pretrain_log_probs = []
+                self.pretrain_probs = []
+                self.pretrain_grad_norms_clipped = []
 
     def train(self):
         """
         Trains a SAC agent with or without constraints' optimization
         """
+
+        # Pretrain the agent with the given demonstrations
+        if self.pretrain is True:
+            pretrain_logs = self.agent.pretrain()
+            self.pretrain_log(*pretrain_logs)
 
         # RL training Loop
         for self.i_episode in itertools.count(1):
@@ -288,7 +302,7 @@ class SACExperiment(TrainExperiment):
                 )
             )
             if self.clip_grad_norm is True:
-                print("Avg grad_norm_clipped: {}\n".format(grad_norm_clipped_avg_per_log_interval))
+                print("Avg grad_norm_clipped: {}\n".format(round(float(grad_norm_clipped_avg_per_log_interval), 2)))
             if self.w_constraint_optimization is True:
                 print(
                     "Avg constraint_policy_loss_term: {}\n"
@@ -326,3 +340,24 @@ class SACExperiment(TrainExperiment):
         :param prefix_model_name: str, prefix name for the models
         """
         self.agent.save(prefix_model_name, self.file_results_dir)
+
+    def pretrain_log(
+            self,
+            mse_losses: List[float],
+            nll_losses: List[float],
+            losses: List[float],
+            log_probs: List[float],
+            probs: List[float],
+            grad_norms_clipped: List[float]
+    ):
+        """
+        Log the pretraining results
+        """
+
+        # Store the pretraining results
+        self.pretrain_mse_losses = mse_losses
+        self.pretrain_nll_losses = nll_losses
+        self.pretrain_losses = losses
+        self.pretrain_log_probs = log_probs
+        self.pretrain_probs = probs
+        self.pretrain_grad_norms_clipped = grad_norms_clipped

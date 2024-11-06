@@ -20,7 +20,7 @@ def main(argv):
     config = get_config(argv[0])
 
     # Check if the selected config file is suitable for the current experiment
-    assert config["game"]["test_model"] is False
+    assert config["Experiment"]["test_model"] is False
     assert config["game"]["with_human"] is False
 
     ## Check other config settings
@@ -46,6 +46,8 @@ def main(argv):
             config['SAC']['w_entropy_in_constraint_policy_loss_term'] is False
 
     )
+    # Check the consistency between 'pretrain' and 'w_constraint_optimization'
+    assert not (config['SAC']['pretrain'] is True and config['SAC']['w_constraint_optimization'] is False)
 
     # Create the environment
     env = safety_gymnasium.make(

@@ -20,8 +20,9 @@ def main(argv):
     config = get_config(argv[0])
 
     # Check if the selected config file is suitable for the current experiment
-    assert config["game"]["test_model"] is True
+    assert config["Experiment"]["test_model"] is True
     assert config["game"]["with_human"] is False
+    assert config["Experiment"]["save_model"] is False
 
     # Create the environment
     env = safety_gymnasium.make(

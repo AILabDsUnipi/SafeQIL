@@ -25,8 +25,6 @@ from SCOPIL.utils.demonstration_utils import ExpertDataset
 
 SelfSAC = TypeVar("SelfSAC", bound="SAC")
 
-# TODO: obs and reward normalization
-
 
 class SAC(ABC):
     """
@@ -99,7 +97,10 @@ class SAC(ABC):
             self.clip_grad_norm: bool = self.config['SAC']['clip_grad_norm']
             self.max_grad_norm: int = self.config['SAC']['max_grad_norm']
             self.adjust_entropy = self.config['SAC']['adjust_entropy']
-            # Placeholders
+            self.pretrain_epochs = self.config['SAC']['pretrain_epochs']
+            self.pretrain_mse_factor = self.config['SAC']['pretrain_mse_factor']
+            self.pretrain_nll_factor = self.config['SAC']['pretrain_nll_factor']
+            # Buffer placeholder
             self.replay_buffer: Optional[ReplayBuffer] = None
         # Define policy keyword arguments
         self.use_sde: bool = self.config['SAC']['use_sde']
@@ -234,8 +235,8 @@ class SAC(ABC):
                     load_to_memory=self.config['SAC']['load_demos_in_memory'],
                     env_id=self.config['game']['env_id'],
                     normalize_features=self.config['Experiment']['normalize_features'],
-                    scale_actions=self.config['SAC']['scale_actions'],
-                    scale_factor=self.config['SAC']['scale_factor']
+                    smooth_actions=self.config['SAC']['smooth_actions'],
+                    smooth_factor=self.config['SAC']['smooth_factor']
                 )
                 # Define torch loader based on torch dataset for training the policy wrt the constraints
                 self.drop_last = len(expert_dataset) > self.batch_size
@@ -355,15 +356,14 @@ class SAC(ABC):
             # Store total actor loss
             actor_losses.append(actor_loss.item())
 
+            ## Optimize the actor
+            self.actor.optimizer.zero_grad()
+            actor_loss.backward()
             # Gradient clipping
             if self.clip_grad_norm is True:
                 grad_norm = th.nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
                 grad_norm_clipped = grad_norm.item() - self.max_grad_norm
                 grad_norms_clipped.append(grad_norm_clipped)
-
-            # Optimize the actor
-            self.actor.optimizer.zero_grad()
-            actor_loss.backward()
             self.actor.optimizer.step()
 
             ## Computation of 'constraint_lambda' loss and optimizer step
@@ -464,9 +464,105 @@ class SAC(ABC):
         return constraint_policy_loss_term
 
     def get_samples_from_demonstrations(self):
-        expert_observations, expert_actions = next(iter(self.train_loader))
+        expert_actions, expert_observations = next(iter(self.train_loader))
 
-        return expert_observations, expert_actions
+        return expert_actions, expert_observations
+
+    def pretrain(self) -> Tuple[List[float], List[float], List[float], List[float], List[float], List[float]]:
+
+        # Initialize vars for logging
+        mse_losses = []
+        nll_losses = []
+        losses = []
+        grad_norms_clipped = []
+        log_probs = []
+        probs = []
+
+        # Define the MSE loss function
+        mse_loss_func = th.nn.MSELoss()
+
+        for epoch in range(self.pretrain_epochs):
+            print(f"\nPretraining epoch: {epoch}")
+
+            # Initialize epoch vars for logging
+            epoch_mse_losses = []
+            epoch_nll_losses = []
+            epoch_losses = []
+            epoch_grad_norms_clipped = []
+            epoch_log_probs = []
+            epoch_probs = []
+
+            for expert_actions, expert_observations in self.train_loader:
+
+                # We need to sample because `log_std` may have changed between two gradient steps
+                if self.use_sde:
+                    self.actor.reset_noise()
+
+                # Action by the current actor for the provided demonstrations
+                actions_pi, log_prob = self.actor.action_log_prob(expert_observations)
+
+                # Log probabilities and entropy of the given actions
+                expert_log_prob, expert_actions_entropy = self.actor.evaluate_actions(
+                    expert_observations,
+                    expert_actions,
+                    scale_actions=True,
+                    adjust_entropy=self.adjust_entropy
+                )
+
+                # Compute loss
+                scaled_expert_actions = self.scale_and_clamp_demo_actions(expert_actions)
+                mse_loss = mse_loss_func(actions_pi, scaled_expert_actions)
+                nll_loss = -th.mean(expert_log_prob)
+                loss = self.pretrain_mse_factor*mse_loss + self.pretrain_nll_factor*nll_loss
+
+                # Keep logs
+                epoch_mse_losses.append(mse_loss.item())
+                epoch_nll_losses.append(nll_loss.item())
+                epoch_losses.append(loss.item())
+                epoch_log_probs.append(th.mean(expert_log_prob).item())
+                epoch_probs.append(th.exp(th.mean(expert_log_prob)).item())
+
+                ## Actor optimizer step
+                self.actor.optimizer.zero_grad()
+                loss.backward()
+                # Gradient clipping
+                if self.clip_grad_norm is True:
+                    grad_norm = th.nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
+                    grad_norm_clipped = grad_norm.item() - self.max_grad_norm
+                    epoch_grad_norms_clipped.append(grad_norm_clipped)
+                self.actor.optimizer.step()
+
+            # Log the mean values of the epoch
+            mse_losses.append(mean(epoch_mse_losses))
+            nll_losses.append(mean(epoch_nll_losses))
+            losses.append(mean(epoch_losses))
+            log_probs.append(mean(epoch_log_probs))
+            probs.append(mean(epoch_probs))
+            if self.clip_grad_norm is True:
+                grad_norms_clipped.append(mean(epoch_grad_norms_clipped))
+
+            # Print the mean values of the epoch
+            print(f"MSE loss: {round(mse_losses[-1], 2)}")
+            print(f"NLL loss: {round(nll_losses[-1], 2)}")
+            print(f"Loss: {round(losses[-1], 2)}")
+            print(f"Log probs: {round(log_probs[-1], 2)}")
+            print(f"Probs: {round(probs[-1], 6)}")
+            if self.clip_grad_norm is True:
+                print(f"Grad norms clipped: {round(grad_norms_clipped[-1], 2)}")
+
+        print("\nPretraining completed!")
+
+        return mse_losses, nll_losses, losses, log_probs, probs, grad_norms_clipped
+
+    def scale_and_clamp_demo_actions(self, expert_actions):
+        scaled_expert_actions = self.actor.scale_action(expert_actions)
+
+        # Since the policy projects the actions to (-1, 1) using tanh, we need to clamp the actions;
+        # otherwise, the probability will be zero.
+        eps = 0.0001
+        scaled_expert_actions = scaled_expert_actions.clamp(min=-1.0 + eps, max=1.0 - eps)
+
+        return scaled_expert_actions
 
     def _get_torch_save_params(self) -> Tuple[List[str], List[str]]:
         state_dicts = ["policy", "actor.optimizer", "critic.optimizer"]

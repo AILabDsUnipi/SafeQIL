@@ -481,13 +481,7 @@ class BaseModel(nn.Module):
 
 class ContinuousCritic(BaseModel):
     """
-    Critic network(s) for DDPG/SAC/TD3.
-    It represents the action-state value function (Q-value function).
-    Compared to A2C/PPO critics, this one represents the Q-value
-    and takes the continuous action as input. It is concatenated with the state
-    and then fed to the network which outputs a single value: Q(s, a).
-    For more recent algorithms like SAC/TD3, multiple networks
-    are created to give different estimates.
+    Critic network(s) for SAC.
 
     By default, it creates two critic networks used to reduce overestimation
     thanks to clipped Q-learning (cf. TD3 paper).
@@ -848,7 +842,7 @@ class Actor(BasePolicy):
 
         :param observations: A tensor of observations.
         :param actions: A tensor of actions to compute the log probabilities and entropy for.
-        :param scale_actions: Whether to scale actions in from [low, high] to [-1, 1].
+        :param scale_actions: Whether to scale actions from [low, high] to [-1, 1].
         :param adjust_entropy: Whether to divide the actions' entropy with the distribution entropy.
         :return: A tuple of tensors (log probabilities, actions entropy).
         """

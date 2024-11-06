@@ -1,12 +1,6 @@
 game:
   env_id: "SafetyPointGoal1-v0"
-  test_model: True # if True, no training
-  load_checkpoint: True
-  checkpoint_path: "/home/georgepap/PycharmProjects/HAI-MAZE_master/safety-gymnasium/results/tmp/sac_single_agent_exp_tt_1/chkpts"
-  checkpoint_prefix: "last"  # Options: "best_reward", "lowest_constr", "last"
   with_human: False # One or two humans if True
-  save_data_for_plots: False
-  save_model: True
   use_image_obs: False
 
 SAC:
@@ -33,33 +27,55 @@ SAC:
   # Constraint optimization
   initial_lambda_constraint: 1.05
   lambda_constraint_lr: 0.0003
-  w_constraint_optimization: False
-  w_dual_grad_desc: False
-  w_entropy_in_constraint_policy_loss_term: False
-  clip_grad_norm: False
+  w_constraint_optimization: True
+  w_dual_grad_desc: True
+  w_entropy_in_constraint_policy_loss_term: True
+  clip_grad_norm: True
   max_grad_norm: 5
   adjust_entropy: False
+  pretrain: True
+  pretrain_epochs: 10
+  pretrain_mse_factor: 1.0
+  pretrain_nll_factor: 0.001
 
   # Demonstrations
   expert_dataset_path: '/home/georgepap/PycharmProjects/HAI-MAZE_master/experiments/safety_gymnasium/human_alone_exp_human_data_simple/tmp/human_alone_exp_human_data_simple_1/demonstrations'
   load_demos_in_memory: True
-  scale_actions: True
-  scale_factor: 0.5
+  smooth_actions: False
+  smooth_factor: 0.9
 
   # Results
   chkpt_dir: "sac_single_agent_exp"
 
 Experiment:
+
+  # Normalization
   normalize_features: True
   normalize_rewards: False
-  log_interval: 2 # 5  # print avg reward in the interval
-  max_timesteps_per_game: 1000  # max timesteps per episode in train mode
-  test_max_games: 5 # 40 # 5  # print avg test reward in the interval
-  test_max_timesteps_per_game: 1000  # max steps per episode in test mode
-  render: True
-  debug_: False
+
+  # Logging
   test_every_episodes: 2 # 5  # episodes interval between tests
+  log_interval: 2 # 5  # print avg reward in the interval
+
+  # Games/Steps
+  max_timesteps_per_game: 1000  # max timesteps per episode in train mode
+  test_max_timesteps_per_game: 1000  # max steps per episode in test mode
+  test_max_games:  5 # 40 # 5  # print avg test reward in the interval
+
+  # Saving
+  save_model: True
+  save_data_for_plots: False
+
+  # Testing
+  test_model: False # if True, no training
+  load_checkpoint: False
+  checkpoint_path: "/home/georgepap/PycharmProjects/HAI-MAZE_master/experiments/safety_gymnasium/sac_w_constr_opt_w_grad_clip_results/train_results/tmp/sac_single_agent_exp_sac_w_constr_opt_w_grad_clip_1/chkpts"
+  checkpoint_prefix: "last"  # Options: "best_reward", "lowest_constr", "last"
+
+  render: False
+  debug_: False
   test_window_size_moving_avg: 10
   seed: None # 2024  # None or int
   device: "cuda"  # "cuda" or "cpu"
+
 

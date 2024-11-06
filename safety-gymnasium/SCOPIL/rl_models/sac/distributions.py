@@ -49,7 +49,7 @@ class TanhBijector:
         :param y:
         :return:
         """
-        eps = th.finfo(y.dtype).eps
+        eps = 0.0001
         # Clip the action to avoid NaN
         return TanhBijector.atanh(y.clamp(min=-1.0 + eps, max=1.0 - eps))
 
@@ -321,8 +321,8 @@ class StateDependentNoiseDistribution(Distribution):
     :param full_std: Whether to use (n_features x n_actions) parameters
         for the std instead of only (n_features,)
     :param use_expln: Use ``expln()`` function instead of ``exp()`` to ensure
-        a positive standard deviation (cf paper). It allows to keep variance
-        above zero and prevent it from growing too fast. In practice, ``exp()`` is usually enough.
+        a positive standard deviation (cf. paper). It allows keeping variance
+        above zero and prevents it from growing too fast. In practice, ``exp()`` is usually enough.
     :param squash_output: Whether to squash the output using a tanh function,
         this ensures bounds are satisfied.
     :param learn_features: Whether to learn features for gSDE or not.

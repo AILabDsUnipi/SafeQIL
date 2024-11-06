@@ -30,7 +30,7 @@ class TrainExperiment(BaseExperiment):
         self.max_timesteps_per_game = config['Experiment']['max_timesteps_per_game']
         self.log_interval = self.config['Experiment']['log_interval']
         self.test_every_episodes = config['Experiment']['test_every_episodes']
-        self.save_model = self.config['game']['save_model']
+        self.save_model = self.config['Experiment']['save_model']
         self.use_image_obs = self.config['game']['use_image_obs']
         self.render = self.config['Experiment']['render']
 
@@ -104,12 +104,16 @@ class TrainExperiment(BaseExperiment):
             if self.save_model is True:
                 if test_avg_reward > self.test_avg_best_score:
                     self.test_avg_best_score = test_avg_reward
-                    print('Saving model... \nHighest reward achieved: ' + str(test_avg_reward))
+                    print(
+                        'Saving model... \nHighest reward achieved: ' + str(round(test_avg_reward, 2))
+                    )
                     self.save_agent_models('best_reward')
                     self.episodes_model_saved['best_reward'].append(self.i_episode)
                 if test_avg_num_constr < self.test_avg_lowest_num_constr:
                     self.test_avg_lowest_num_constr = test_avg_num_constr
-                    print('Saving model... \nLowest number of constraints achieved: ' + str(test_avg_num_constr))
+                    print(
+                        'Saving model... \nLowest number of constraints achieved: ' + str(round(test_avg_num_constr, 2))
+                    )
                     self.save_agent_models('lowest_constr')
                     self.episodes_model_saved['lowest_constr'].append(self.i_episode)
                 if self.i_episode == 1 or self.i_episode % self.test_every_episodes == 0:

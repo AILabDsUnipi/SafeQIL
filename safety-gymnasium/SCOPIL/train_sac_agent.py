@@ -35,10 +35,10 @@ def main(argv):
             config['SAC']['w_dual_grad_desc'] is True and
             config['SAC']['w_constraint_optimization'] is False
     )
-    # Check the consistency between 'w_entropy_in_constraint_policy_loss_term' and 'w_dual_grad_desc'
+    # Check the consistency between 'w_entropy_in_constraint_policy_loss_term' and 'w_constraint_optimization'
     assert not (
             config['SAC']['w_entropy_in_constraint_policy_loss_term'] is True and
-            config['SAC']['w_dual_grad_desc'] is False
+            config['SAC']['w_constraint_optimization'] is False
     )
     # Check the consistency between 'w_entropy_in_constraint_policy_loss_term' and 'adjust_entropy'
     assert not (
@@ -48,6 +48,8 @@ def main(argv):
     )
     # Check the consistency between 'pretrain' and 'w_constraint_optimization'
     assert not (config['SAC']['pretrain'] is True and config['SAC']['w_constraint_optimization'] is False)
+    # Check the consistency between 'pretrain' and 'only_pretrain'
+    assert not (config['SAC']['only_pretrain'] is True and config['SAC']['pretrain'] is False)
 
     # Create the environment
     env = safety_gymnasium.make(

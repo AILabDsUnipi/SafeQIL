@@ -29,6 +29,8 @@ class SACExperiment(TrainExperiment):
         self.w_constraint_optimization = config['SAC']['w_constraint_optimization']
         self.clip_grad_norm = config['SAC']['clip_grad_norm']
         self.pretrain = config['SAC']['pretrain']
+        self.only_pretrain = config['SAC']['only_pretrain']
+        self.w_mse = config['SAC']['w_mse']
 
         # Initialize lists to keep track of information and variables during training
         self.i_train_episode = 0
@@ -61,6 +63,13 @@ class SACExperiment(TrainExperiment):
             self.constraint_lambda_loss_value_avg_per_log_interval = []
             self.policy_loss_value_wo_constraint_term_avg_per_log_interval = []
             self.constraint_lambda_avg_per_log_interval = []
+            if self.w_mse is True:
+                self.constraint_policy_loss_nll_term_value_list = []
+                self.constraint_policy_loss_mse_term_value_list = []
+                self.constraint_policy_loss_nll_term_value_cur_game_list = []
+                self.constraint_policy_loss_mse_term_value_cur_game_list = []
+                self.constraint_policy_loss_nll_term_value_avg_per_log_interval = []
+                self.constraint_policy_loss_mse_term_value_avg_per_log_interval = []
             if self.pretrain is True:
                 self.pretrain_mse_losses = []
                 self.pretrain_nll_losses = []
@@ -76,8 +85,12 @@ class SACExperiment(TrainExperiment):
 
         # Pretrain the agent with the given demonstrations
         if self.pretrain is True:
-            pretrain_logs = self.agent.pretrain()
-            self.pretrain_log(*pretrain_logs)
+            self.pretrain_func()
+            if self.only_pretrain is True:
+                # Close the environment
+                self.env.close()
+                # Dummy return just to avoid RL train
+                return
 
         # RL training Loop
         for self.i_episode in itertools.count(1):
@@ -135,6 +148,13 @@ class SACExperiment(TrainExperiment):
         # Close the environment
         self.env.close()
 
+    def pretrain_func(self):
+        # Train
+        pretrain_logs = self.agent.pretrain_func()
+
+        # Log
+        self.pretrain_log(*pretrain_logs)
+
     def save_experience(self, data):
         """
         Saves an interaction to the replay buffer of the agent.
@@ -169,6 +189,9 @@ class SACExperiment(TrainExperiment):
             self.constraint_lambda_loss_value_cur_game_list = []
             self.policy_loss_value_wo_constraint_term_cur_game_list = []
             self.constraint_lambda_cur_game_list = []
+            if self.w_mse is True:
+                self.constraint_policy_loss_nll_term_value_cur_game_list = []
+                self.constraint_policy_loss_mse_term_value_cur_game_list = []
         if self.clip_grad_norm is True:
             self.grad_norm_clipped_cur_game_list = []
 
@@ -210,11 +233,14 @@ class SACExperiment(TrainExperiment):
             self.entr_coef_cur_game_list.append(training_returns[3])
             if self.w_constraint_optimization is True:
                 self.constraint_policy_loss_term_value_cur_game_list.append(training_returns[4])
-                self.constraint_lambda_loss_value_cur_game_list.append(training_returns[5])
-                self.policy_loss_value_wo_constraint_term_cur_game_list.append(training_returns[6])
-                self.constraint_lambda_cur_game_list.append(training_returns[7])
+                self.constraint_lambda_loss_value_cur_game_list.append(training_returns[7])
+                self.policy_loss_value_wo_constraint_term_cur_game_list.append(training_returns[8])
+                self.constraint_lambda_cur_game_list.append(training_returns[9])
+                if self.w_mse is True:
+                    self.constraint_policy_loss_nll_term_value_cur_game_list.append(training_returns[5])
+                    self.constraint_policy_loss_mse_term_value_cur_game_list.append(training_returns[6])
             if self.clip_grad_norm is True:
-                self.grad_norm_clipped_cur_game_list.append(training_returns[8])
+                self.grad_norm_clipped_cur_game_list.append(training_returns[10])
 
     def train_mode(self):
         """
@@ -249,6 +275,13 @@ class SACExperiment(TrainExperiment):
                     np.mean(self.policy_loss_value_wo_constraint_term_cur_game_list)
                 )
                 self.constraint_lambda_list.append(np.mean(self.constraint_lambda_cur_game_list))
+                if self.w_mse is True:
+                    self.constraint_policy_loss_nll_term_value_list.append(
+                        np.mean(self.constraint_policy_loss_nll_term_value_cur_game_list)
+                    )
+                    self.constraint_policy_loss_mse_term_value_list.append(
+                        np.mean(self.constraint_policy_loss_mse_term_value_cur_game_list)
+                    )
             if self.clip_grad_norm is True:
                 self.grad_norm_clipped_list.append(np.mean(self.grad_norm_clipped_cur_game_list))
 
@@ -268,12 +301,15 @@ class SACExperiment(TrainExperiment):
             self.ent_coef_loss_avg_per_log_interval.append(ent_coef_loss_avg_per_log_interval)
             self.entr_coef_avg_per_log_interval.append(entr_coef_avg_per_log_interval)
             if self.w_constraint_optimization is True:
-                constraint_policy_loss_term_avg_per_log_interval = \
-                    np.mean(self.constraint_policy_loss_term_value_list[-self.log_interval:])
-                constraint_lambda_loss_avg_per_log_interval = \
-                    np.mean(self.constraint_lambda_loss_value_list[-self.log_interval:])
-                policy_loss_wo_constraint_term_avg_per_log_interval = \
-                    np.mean(self.policy_loss_value_wo_constraint_term_list[-self.log_interval:])
+                constraint_policy_loss_term_avg_per_log_interval = np.mean(
+                    self.constraint_policy_loss_term_value_list[-self.log_interval:]
+                )
+                constraint_lambda_loss_avg_per_log_interval = np.mean(
+                    self.constraint_lambda_loss_value_list[-self.log_interval:]
+                )
+                policy_loss_wo_constraint_term_avg_per_log_interval = np.mean(
+                    self.policy_loss_value_wo_constraint_term_list[-self.log_interval:]
+                )
                 constraint_lambda_avg_per_log_interval = np.mean(self.constraint_lambda_list[-self.log_interval:])
                 self.constraint_policy_loss_term_value_avg_per_log_interval.append(
                     constraint_policy_loss_term_avg_per_log_interval
@@ -285,6 +321,19 @@ class SACExperiment(TrainExperiment):
                     policy_loss_wo_constraint_term_avg_per_log_interval
                 )
                 self.constraint_lambda_avg_per_log_interval.append(constraint_lambda_avg_per_log_interval)
+                if self.w_mse is True:
+                    constraint_policy_loss_nll_term_avg_per_log_interval = np.mean(
+                        self.constraint_policy_loss_nll_term_value_list[-self.log_interval:]
+                    )
+                    constraint_policy_loss_mse_term_avg_per_log_interval = np.mean(
+                        self.constraint_policy_loss_mse_term_value_list[-self.log_interval:]
+                    )
+                    self.constraint_policy_loss_nll_term_value_avg_per_log_interval.append(
+                        constraint_policy_loss_nll_term_avg_per_log_interval
+                    )
+                    self.constraint_policy_loss_mse_term_value_avg_per_log_interval.append(
+                        constraint_policy_loss_mse_term_avg_per_log_interval
+                    )
             if self.clip_grad_norm is True:
                 grad_norm_clipped_avg_per_log_interval = np.mean(self.grad_norm_clipped_list[-self.log_interval:])
                 self.grad_norm_clipped_avg_per_log_interval.append(grad_norm_clipped_avg_per_log_interval)
@@ -315,6 +364,14 @@ class SACExperiment(TrainExperiment):
                         round(float(constraint_lambda_avg_per_log_interval), 2)
                     )
                 )
+                if self.w_mse is True:
+                    print(
+                        "Avg constraint_policy_loss_nll_term: {}\n"
+                        "Avg constraint_policy_loss_mse_term: {}\n".format(
+                            round(float(constraint_policy_loss_nll_term_avg_per_log_interval), 2),
+                            round(float(constraint_policy_loss_mse_term_avg_per_log_interval), 2)
+                        )
+                    )
 
         if self.debug_:
             # TODO: Print useful information

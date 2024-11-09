@@ -97,6 +97,10 @@ class SAC(ABC):
             self.clip_grad_norm: bool = self.config['SAC']['clip_grad_norm']
             self.max_grad_norm: int = self.config['SAC']['max_grad_norm']
             self.adjust_entropy = self.config['SAC']['adjust_entropy']
+            self.w_mse = self.config['SAC']['w_mse']
+            self.mse_factor = self.config['SAC']['mse_factor']
+            self.nll_factor = self.config['SAC']['nll_factor']
+            self.pretrain = self.config['SAC']['pretrain']
             self.pretrain_epochs = self.config['SAC']['pretrain_epochs']
             self.pretrain_mse_factor = self.config['SAC']['pretrain_mse_factor']
             self.pretrain_nll_factor = self.config['SAC']['pretrain_nll_factor']
@@ -246,13 +250,16 @@ class SAC(ABC):
                     shuffle=True,
                     drop_last=self.drop_last
                 )
+                # Define the MSE loss function
+                if self.pretrain is True or self.w_mse is True:
+                    self.mse_loss_func = th.nn.MSELoss()
 
     def _create_aliases(self) -> None:
         self.actor = self.policy.actor
         self.critic = self.policy.critic
         self.critic_target = self.policy.critic_target
 
-    def train(self) -> Tuple[float, float, float, float, float, float, float, float, float]:
+    def train(self) -> Tuple[float, float, float, float, float, float, float, float, float, float, float]:
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
 
@@ -263,6 +270,8 @@ class SAC(ABC):
 
         # Logs for constraint optimization
         constraint_policy_loss_term_values = []
+        constraint_policy_loss_nll_term_values = []
+        constraint_policy_loss_mse_term_values = []
         constraint_lambda_loss_values = []
         policy_loss_value_wo_constraint_terms = []
         constraint_lambdas = []
@@ -344,14 +353,18 @@ class SAC(ABC):
                 policy_loss_value_wo_constraint_term = actor_loss.item()
                 policy_loss_value_wo_constraint_terms.append(policy_loss_value_wo_constraint_term)
                 ## Calculate policy loss wrt constraints
-                constraint_policy_loss_term = self.calc_constraint_policy_loss_term([
-                    expert_actions, expert_observations
-                ])
+                (
+                    constraint_policy_loss_term,
+                    constraint_policy_loss_nll_term_value,
+                    constraint_policy_loss_mse_term_value
+                ) = self.calc_constraint_policy_loss_term([expert_actions, expert_observations])
                 # Add constraint term loss to policy loss
                 actor_loss = actor_loss + self.constraint_lambda.item() * constraint_policy_loss_term
                 # Keep it for logs
                 constraint_policy_loss_term_value = constraint_policy_loss_term.item()
                 constraint_policy_loss_term_values.append(constraint_policy_loss_term_value)
+                constraint_policy_loss_nll_term_values.append(constraint_policy_loss_nll_term_value)
+                constraint_policy_loss_mse_term_values.append(constraint_policy_loss_mse_term_value)
 
             # Store total actor loss
             actor_losses.append(actor_loss.item())
@@ -389,12 +402,16 @@ class SAC(ABC):
                 polyak_update(self.batch_norm_stats, self.batch_norm_stats_target, 1.0)
 
         constraint_policy_loss_term_values_mean = np.nan
+        constraint_policy_loss_nll_term_values_mean = np.nan
+        constraint_policy_loss_mse_term_values_mean = np.nan
         constraint_lambda_loss_values_mean = np.nan
         policy_loss_value_wo_constraint_terms_mean = np.nan
         constraint_lambdas_mean = np.nan
         grad_norms_clipped_mean = np.nan
         if self.w_constraint_optimization is True:
             constraint_policy_loss_term_values_mean = mean(constraint_policy_loss_term_values)
+            constraint_policy_loss_nll_term_values_mean = mean(constraint_policy_loss_nll_term_values)
+            constraint_policy_loss_mse_term_values_mean = mean(constraint_policy_loss_mse_term_values)
             constraint_lambda_loss_values_mean = mean(constraint_lambda_loss_values)
             policy_loss_value_wo_constraint_terms_mean = mean(policy_loss_value_wo_constraint_terms)
             constraint_lambdas_mean = mean(constraint_lambdas)
@@ -407,6 +424,8 @@ class SAC(ABC):
             np.nan if self.ent_coef_optimizer is None else mean(ent_coef_losses),
             mean(ent_coefs),
             constraint_policy_loss_term_values_mean,
+            constraint_policy_loss_nll_term_values_mean,
+            constraint_policy_loss_mse_term_values_mean,
             constraint_lambda_loss_values_mean,
             policy_loss_value_wo_constraint_terms_mean,
             constraint_lambdas_mean,
@@ -414,7 +433,7 @@ class SAC(ABC):
         )
 
     def calc_constraint_lambda_loss(self, demonstrations):
-        constraint_policy_loss_term = self.calc_constraint_policy_loss_term(demonstrations)
+        constraint_policy_loss_term, _, _ = self.calc_constraint_policy_loss_term(demonstrations)
         constraint_lambda_loss = -self.constraint_lambda.squeeze(0) * constraint_policy_loss_term.item()
 
         return constraint_lambda_loss
@@ -452,23 +471,35 @@ class SAC(ABC):
             adjust_entropy=self.adjust_entropy
         )
         if self.w_entropy_in_constraint_policy_loss_term is True:
+            # Entropy regularized NLL
             if self.log_ent_coef is not None:
                 ent_coef = self.log_ent_coef.exp().item()
             else:
                 ent_coef = self.ent_coef_tensor.item()
-            # Calculate final loss
             constraint_policy_loss_term = -th.mean(log_probs) - (ent_coef * th.mean(actions_entropy))
         else:
+            # NLL
             constraint_policy_loss_term = -th.mean(log_probs)
+        # Keep it for logs
+        constraint_policy_loss_nll_term_value = constraint_policy_loss_term.item()
 
-        return constraint_policy_loss_term
+        # MSE between the policy's actions and the expert actions
+        actions_pi, log_probs_pi = self.actor.action_log_prob(observations)
+        scaled_expert_actions = self.scale_and_clamp_demo_actions(actions)
+        mse_loss = self.mse_loss_func(actions_pi, scaled_expert_actions)
+        if self.w_mse is True:
+            constraint_policy_loss_term = self.nll_factor*constraint_policy_loss_term + self.mse_factor*mse_loss
+        # Keep it for logs
+        constraint_policy_loss_mse_term_value = mse_loss.item()
+
+        return constraint_policy_loss_term, constraint_policy_loss_nll_term_value, constraint_policy_loss_mse_term_value
 
     def get_samples_from_demonstrations(self):
         expert_actions, expert_observations = next(iter(self.train_loader))
 
         return expert_actions, expert_observations
 
-    def pretrain(self) -> Tuple[List[float], List[float], List[float], List[float], List[float], List[float]]:
+    def pretrain_func(self) -> Tuple[List[float], List[float], List[float], List[float], List[float], List[float]]:
 
         # Initialize vars for logging
         mse_losses = []
@@ -477,9 +508,6 @@ class SAC(ABC):
         grad_norms_clipped = []
         log_probs = []
         probs = []
-
-        # Define the MSE loss function
-        mse_loss_func = th.nn.MSELoss()
 
         for epoch in range(self.pretrain_epochs):
             print(f"\nPretraining epoch: {epoch}")
@@ -511,7 +539,7 @@ class SAC(ABC):
 
                 # Compute loss
                 scaled_expert_actions = self.scale_and_clamp_demo_actions(expert_actions)
-                mse_loss = mse_loss_func(actions_pi, scaled_expert_actions)
+                mse_loss = self.mse_loss_func(actions_pi, scaled_expert_actions)
                 nll_loss = -th.mean(expert_log_prob)
                 loss = self.pretrain_mse_factor*mse_loss + self.pretrain_nll_factor*nll_loss
 
@@ -525,6 +553,7 @@ class SAC(ABC):
                 ## Actor optimizer step
                 self.actor.optimizer.zero_grad()
                 loss.backward()
+
                 # Gradient clipping
                 if self.clip_grad_norm is True:
                     grad_norm = th.nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)

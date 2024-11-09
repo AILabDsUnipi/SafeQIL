@@ -846,15 +846,15 @@ class Actor(BasePolicy):
         :param adjust_entropy: Whether to divide the actions' entropy with the distribution entropy.
         :return: A tuple of tensors (log probabilities, actions entropy).
         """
+
+        if scale_actions is True:
+            actions = self.scale_action(actions)
+
         # Compute the policy distribution parameters
         mean_actions, log_std, kwargs = self.get_action_dist_params(observations)
 
         # Get the distribution and compute log probabilities
         self.action_dist.proba_distribution(mean_actions, log_std, **kwargs)
-
-        if scale_actions is True:
-            actions = self.scale_action(actions)
-
         log_probs = self.action_dist.log_prob(actions)
 
         actions_entropy = -log_probs

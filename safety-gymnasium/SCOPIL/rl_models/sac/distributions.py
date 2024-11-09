@@ -440,6 +440,7 @@ class StateDependentNoiseDistribution(Distribution):
         :param latent_sde:
         :return:
         """
+
         # Stop gradient if we don't want to influence the features
         self._latent_sde = latent_sde if self.learn_features else latent_sde.detach()
         variance = th.mm(self._latent_sde**2, self.get_std(log_std) ** 2)

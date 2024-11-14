@@ -37,8 +37,8 @@ SAC:
   mse_factor: 1.0
   nll_factor: 0.001
   pretrain: True
-  only_pretrain: True
-  pretrain_epochs: 50
+  only_pretrain: False
+  pretrain_epochs: 10
   pretrain_mse_factor: 1.0
   pretrain_nll_factor: 0.001
   w_std_grads: False
@@ -65,7 +65,7 @@ Experiment:
   # Games/Steps
   max_timesteps_per_game: 1000  # max timesteps per episode in train mode
   test_max_timesteps_per_game: 1000  # max steps per episode in test mode
-  test_max_games: 40 # 5  # print avg test reward in the interval
+  test_max_games: 5 #  40 # 5  # print avg test reward in the interval
 
   # Saving
   save_model: False

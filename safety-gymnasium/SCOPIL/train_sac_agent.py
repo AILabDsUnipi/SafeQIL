@@ -54,6 +54,8 @@ def main(argv):
     assert not (config['SAC']['pretrain'] is True and config['SAC']['w_constraint_optimization'] is False)
     # Check the consistency between 'pretrain' and 'only_pretrain'
     assert not (config['SAC']['only_pretrain'] is True and config['SAC']['pretrain'] is False)
+    # Check the consistency between 'w_std_grads' and 'w_constraint_optimization'
+    assert not (config['SAC']['w_std_grads'] is True and config['SAC']['w_constraint_optimization'] is False)
 
     # Create the environment
     env = safety_gymnasium.make(

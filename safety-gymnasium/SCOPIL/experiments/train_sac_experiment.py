@@ -1,5 +1,4 @@
 import itertools
-from typing import List
 
 import numpy as np
 
@@ -34,49 +33,11 @@ class SACExperiment(TrainExperiment):
 
         # Initialize lists to keep track of information and variables during training
         self.i_train_episode = 0
-        self.actor_loss_list = []
-        self.critic_loss_list = []
-        self.ent_coef_loss_list = []
-        self.entr_coef_list = []
-        self.actor_loss_cur_game_list = []
-        self.critic_loss_cur_game_list = []
-        self.ent_coef_loss_cur_game_list = []
-        self.entr_coef_cur_game_list = []
-        self.actor_loss_avg_per_log_interval = []
-        self.critic_loss_avg_per_log_interval = []
-        self.ent_coef_loss_avg_per_log_interval = []
-        self.entr_coef_avg_per_log_interval = []
-        if self.clip_grad_norm is True:
-            self.grad_norm_clipped_list = []
-            self.grad_norm_clipped_cur_game_list = []
-            self.grad_norm_clipped_avg_per_log_interval = []
-        if self.w_constraint_optimization is True:
-            self.constraint_policy_loss_term_value_list = []
-            self.constraint_lambda_loss_value_list = []
-            self.policy_loss_value_wo_constraint_term_list = []
-            self.constraint_lambda_list = []
-            self.constraint_policy_loss_term_value_cur_game_list = []
-            self.constraint_lambda_loss_value_cur_game_list = []
-            self.policy_loss_value_wo_constraint_term_cur_game_list = []
-            self.constraint_lambda_cur_game_list = []
-            self.constraint_policy_loss_term_value_avg_per_log_interval = []
-            self.constraint_lambda_loss_value_avg_per_log_interval = []
-            self.policy_loss_value_wo_constraint_term_avg_per_log_interval = []
-            self.constraint_lambda_avg_per_log_interval = []
-            if self.w_mse is True:
-                self.constraint_policy_loss_nll_term_value_list = []
-                self.constraint_policy_loss_mse_term_value_list = []
-                self.constraint_policy_loss_nll_term_value_cur_game_list = []
-                self.constraint_policy_loss_mse_term_value_cur_game_list = []
-                self.constraint_policy_loss_nll_term_value_avg_per_log_interval = []
-                self.constraint_policy_loss_mse_term_value_avg_per_log_interval = []
-            if self.pretrain is True:
-                self.pretrain_mse_losses = []
-                self.pretrain_nll_losses = []
-                self.pretrain_losses = []
-                self.pretrain_log_probs = []
-                self.pretrain_probs = []
-                self.pretrain_grad_norms_clipped = []
+        self.train_logs_dict = {}
+        self.train_logs_cur_game_dict = {}
+        self.train_logs_avg_per_log_interval_dict = {}
+        if self.pretrain is True:
+            self.pretrain_logs_dict = {}
 
     def train(self):
         """
@@ -150,10 +111,7 @@ class SACExperiment(TrainExperiment):
 
     def pretrain_func(self):
         # Train
-        pretrain_logs = self.agent.pretrain_func()
-
-        # Log
-        self.pretrain_log(*pretrain_logs)
+        self.pretrain_logs_dict = self.agent.pretrain_func()
 
         # Save the models
         if self.only_pretrain is True and self.save_model is True:
@@ -185,20 +143,8 @@ class SACExperiment(TrainExperiment):
             self.agent.actor.reset_noise(1)
 
         # Initialize lists for training details
-        self.actor_loss_cur_game_list = []
-        self.critic_loss_cur_game_list = []
-        self.ent_coef_loss_cur_game_list = []
-        self.entr_coef_cur_game_list = []
-        if self.w_constraint_optimization is True:
-            self.constraint_policy_loss_term_value_cur_game_list = []
-            self.constraint_lambda_loss_value_cur_game_list = []
-            self.policy_loss_value_wo_constraint_term_cur_game_list = []
-            self.constraint_lambda_cur_game_list = []
-            if self.w_mse is True:
-                self.constraint_policy_loss_nll_term_value_cur_game_list = []
-                self.constraint_policy_loss_mse_term_value_cur_game_list = []
-        if self.clip_grad_norm is True:
-            self.grad_norm_clipped_cur_game_list = []
+        for key in self.train_logs_cur_game_dict.keys():
+            self.train_logs_cur_game_dict[key] = []
 
     def train_update_per_step_vars(self):
         """
@@ -232,20 +178,11 @@ class SACExperiment(TrainExperiment):
             training_returns = self.train_networks()
 
             # Store train metrics
-            self.actor_loss_cur_game_list.append(training_returns[0])
-            self.critic_loss_cur_game_list.append(training_returns[1])
-            self.ent_coef_loss_cur_game_list.append(training_returns[2])
-            self.entr_coef_cur_game_list.append(training_returns[3])
-            if self.w_constraint_optimization is True:
-                self.constraint_policy_loss_term_value_cur_game_list.append(training_returns[4])
-                self.constraint_lambda_loss_value_cur_game_list.append(training_returns[7])
-                self.policy_loss_value_wo_constraint_term_cur_game_list.append(training_returns[8])
-                self.constraint_lambda_cur_game_list.append(training_returns[9])
-                if self.w_mse is True:
-                    self.constraint_policy_loss_nll_term_value_cur_game_list.append(training_returns[5])
-                    self.constraint_policy_loss_mse_term_value_cur_game_list.append(training_returns[6])
-            if self.clip_grad_norm is True:
-                self.grad_norm_clipped_cur_game_list.append(training_returns[10])
+            for key, value in training_returns.items():
+                if key not in list(self.train_logs_cur_game_dict.keys()):
+                    self.train_logs_cur_game_dict[key] = []
+                if value is not np.nan:
+                    self.train_logs_cur_game_dict[key].append(value)
 
     def train_mode(self):
         """
@@ -265,30 +202,11 @@ class SACExperiment(TrainExperiment):
 
         # Store all game train metrics
         if self.total_steps >= self.start_steps:
-            self.actor_loss_list.append(np.mean(self.actor_loss_cur_game_list))
-            self.critic_loss_list.append(np.mean(self.critic_loss_cur_game_list))
-            self.ent_coef_loss_list.append(np.mean(self.ent_coef_loss_cur_game_list))
-            self.entr_coef_list.append(np.mean(self.entr_coef_cur_game_list))
-            if self.w_constraint_optimization is True:
-                self.constraint_policy_loss_term_value_list.append(
-                    np.mean(self.constraint_policy_loss_term_value_cur_game_list)
-                )
-                self.constraint_lambda_loss_value_list.append(
-                    np.mean(self.constraint_lambda_loss_value_cur_game_list)
-                )
-                self.policy_loss_value_wo_constraint_term_list.append(
-                    np.mean(self.policy_loss_value_wo_constraint_term_cur_game_list)
-                )
-                self.constraint_lambda_list.append(np.mean(self.constraint_lambda_cur_game_list))
-                if self.w_mse is True:
-                    self.constraint_policy_loss_nll_term_value_list.append(
-                        np.mean(self.constraint_policy_loss_nll_term_value_cur_game_list)
-                    )
-                    self.constraint_policy_loss_mse_term_value_list.append(
-                        np.mean(self.constraint_policy_loss_mse_term_value_cur_game_list)
-                    )
-            if self.clip_grad_norm is True:
-                self.grad_norm_clipped_list.append(np.mean(self.grad_norm_clipped_cur_game_list))
+            for key, value in self.train_logs_cur_game_dict.items():
+                if key not in list(self.train_logs_dict.keys()):
+                    self.train_logs_dict[key] = []
+                if len(value) > 0:
+                    self.train_logs_dict[key].append(np.mean(value))
 
         ## logging per interval
         if (
@@ -297,86 +215,24 @@ class SACExperiment(TrainExperiment):
         ):
 
             # Calculate and store per_log_interval values
-            actor_loss_avg_per_log_interval = np.mean(self.actor_loss_list[-self.log_interval:])
-            critic_loss_avg_per_log_interval = np.mean(self.critic_loss_list[-self.log_interval:])
-            ent_coef_loss_avg_per_log_interval = np.mean(self.ent_coef_loss_list[-self.log_interval:])
-            entr_coef_avg_per_log_interval = np.mean(self.entr_coef_list[-self.log_interval:])
-            self.actor_loss_avg_per_log_interval.append(actor_loss_avg_per_log_interval)
-            self.critic_loss_avg_per_log_interval.append(critic_loss_avg_per_log_interval)
-            self.ent_coef_loss_avg_per_log_interval.append(ent_coef_loss_avg_per_log_interval)
-            self.entr_coef_avg_per_log_interval.append(entr_coef_avg_per_log_interval)
-            if self.w_constraint_optimization is True:
-                constraint_policy_loss_term_avg_per_log_interval = np.mean(
-                    self.constraint_policy_loss_term_value_list[-self.log_interval:]
-                )
-                constraint_lambda_loss_avg_per_log_interval = np.mean(
-                    self.constraint_lambda_loss_value_list[-self.log_interval:]
-                )
-                policy_loss_wo_constraint_term_avg_per_log_interval = np.mean(
-                    self.policy_loss_value_wo_constraint_term_list[-self.log_interval:]
-                )
-                constraint_lambda_avg_per_log_interval = np.mean(self.constraint_lambda_list[-self.log_interval:])
-                self.constraint_policy_loss_term_value_avg_per_log_interval.append(
-                    constraint_policy_loss_term_avg_per_log_interval
-                )
-                self.constraint_lambda_loss_value_avg_per_log_interval.append(
-                    constraint_lambda_loss_avg_per_log_interval
-                )
-                self.policy_loss_value_wo_constraint_term_avg_per_log_interval.append(
-                    policy_loss_wo_constraint_term_avg_per_log_interval
-                )
-                self.constraint_lambda_avg_per_log_interval.append(constraint_lambda_avg_per_log_interval)
-                if self.w_mse is True:
-                    constraint_policy_loss_nll_term_avg_per_log_interval = np.mean(
-                        self.constraint_policy_loss_nll_term_value_list[-self.log_interval:]
-                    )
-                    constraint_policy_loss_mse_term_avg_per_log_interval = np.mean(
-                        self.constraint_policy_loss_mse_term_value_list[-self.log_interval:]
-                    )
-                    self.constraint_policy_loss_nll_term_value_avg_per_log_interval.append(
-                        constraint_policy_loss_nll_term_avg_per_log_interval
-                    )
-                    self.constraint_policy_loss_mse_term_value_avg_per_log_interval.append(
-                        constraint_policy_loss_mse_term_avg_per_log_interval
-                    )
-            if self.clip_grad_norm is True:
-                grad_norm_clipped_avg_per_log_interval = np.mean(self.grad_norm_clipped_list[-self.log_interval:])
-                self.grad_norm_clipped_avg_per_log_interval.append(grad_norm_clipped_avg_per_log_interval)
+            for key, value in self.train_logs_dict.items():
+                if key not in list(self.train_logs_avg_per_log_interval_dict.keys()):
+                    self.train_logs_avg_per_log_interval_dict[key] = []
+                if len(value) > 0:
+                    self.train_logs_avg_per_log_interval_dict[key].append(np.mean(value[-self.log_interval:]))
 
             # Print per_log_interval values
-            print(
-                "\nAvg actor_loss: {}\n"
-                "Avg critic_loss: {}\n"
-                "Avg ent_coef_loss: {}\n"
-                "Avg entr_coef: {}\n".format(
-                    round(float(actor_loss_avg_per_log_interval), 2),
-                    round(float(critic_loss_avg_per_log_interval), 2),
-                    round(float(ent_coef_loss_avg_per_log_interval), 2),
-                    round(float(entr_coef_avg_per_log_interval), 2)
-                )
-            )
-            if self.clip_grad_norm is True:
-                print("Avg grad_norm_clipped: {}\n".format(round(float(grad_norm_clipped_avg_per_log_interval), 2)))
-            if self.w_constraint_optimization is True:
+            print()  # just for printing an empty line
+            for key, value in self.train_logs_avg_per_log_interval_dict.items():
+                if len(value) == 0:
+                    continue  # Ignore empty logs
                 print(
-                    "Avg constraint_policy_loss_term: {}\n"
-                    "Avg constraint_lambda_loss: {}\n"
-                    "Avg policy_loss_wo_constraint_term: {}\n"
-                    "Avg constraint_lambda: {}\n".format(
-                        round(float(constraint_policy_loss_term_avg_per_log_interval), 2),
-                        round(float(constraint_lambda_loss_avg_per_log_interval), 2),
-                        round(float(policy_loss_wo_constraint_term_avg_per_log_interval), 2),
-                        round(float(constraint_lambda_avg_per_log_interval), 2)
+                    "Avg {}: {}".format(
+                        key,
+                        round(float(value[-1]), 2)
                     )
                 )
-                if self.w_mse is True:
-                    print(
-                        "Avg constraint_policy_loss_nll_term: {}\n"
-                        "Avg constraint_policy_loss_mse_term: {}\n".format(
-                            round(float(constraint_policy_loss_nll_term_avg_per_log_interval), 2),
-                            round(float(constraint_policy_loss_mse_term_avg_per_log_interval), 2)
-                        )
-                    )
+            print()  # just for printing another empty line
 
         if self.debug_:
             # TODO: Print useful information
@@ -402,24 +258,3 @@ class SACExperiment(TrainExperiment):
         :param prefix_model_name: str, prefix name for the models
         """
         self.agent.save(prefix_model_name, self.file_results_dir)
-
-    def pretrain_log(
-            self,
-            mse_losses: List[float],
-            nll_losses: List[float],
-            losses: List[float],
-            log_probs: List[float],
-            probs: List[float],
-            grad_norms_clipped: List[float]
-    ):
-        """
-        Log the pretraining results
-        """
-
-        # Store the pretraining results
-        self.pretrain_mse_losses = mse_losses
-        self.pretrain_nll_losses = nll_losses
-        self.pretrain_losses = losses
-        self.pretrain_log_probs = log_probs
-        self.pretrain_probs = probs
-        self.pretrain_grad_norms_clipped = grad_norms_clipped

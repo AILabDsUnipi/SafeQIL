@@ -155,6 +155,11 @@ class SACExperiment(TrainExperiment):
         # Log
         self.pretrain_log(*pretrain_logs)
 
+        # Save the models
+        if self.only_pretrain is True and self.save_model is True:
+            print('Saving last models...')
+            self.save_agent_models('last')
+
     def save_experience(self, data):
         """
         Saves an interaction to the replay buffer of the agent.

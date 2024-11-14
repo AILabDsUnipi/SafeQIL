@@ -37,10 +37,11 @@ SAC:
   mse_factor: 1.0
   nll_factor: 0.001
   pretrain: True
-  only_pretrain: False
-  pretrain_epochs: 10
+  only_pretrain: True
+  pretrain_epochs: 50
   pretrain_mse_factor: 1.0
   pretrain_nll_factor: 0.001
+  w_std_grads: False
 
   # Demonstrations
   expert_dataset_path: '/home/georgepap/PycharmProjects/HAI-MAZE_master/experiments/safety_gymnasium/human_alone_exp_human_data_simple/tmp/human_alone_exp_human_data_simple_1/demonstrations'
@@ -64,7 +65,7 @@ Experiment:
   # Games/Steps
   max_timesteps_per_game: 1000  # max timesteps per episode in train mode
   test_max_timesteps_per_game: 1000  # max steps per episode in test mode
-  test_max_games:  40 # 5  # print avg test reward in the interval
+  test_max_games: 40 # 5  # print avg test reward in the interval
 
   # Saving
   save_model: False
@@ -73,7 +74,7 @@ Experiment:
   # Testing
   test_model: False # if True, no training
   load_checkpoint: False
-  checkpoint_path: "/home/georgepap/PycharmProjects/HAI-MAZE_master/experiments/safety_gymnasium/sac_w_constr_opt_w_pretrain_results/train_results/tmp/sac_single_agent_exp_sac_w_constr_opt_w_pretrain_1/chkpts"
+  checkpoint_path: "/home/georgepap/PycharmProjects/HAI-MAZE_master/experiments/safety_gymnasium/sac_w_constr_opt_w_pretrain_w_mse_w_action_smooth=0.99_wo_dual_grad_desc_init_lambda=7.05/train_results/tmp/sac_single_agent_exp_sac_w_constr_opt_w_pretrain_w_mse_w_action_smooth=0.99_wo_dual_grad_desc_init_lambda=7.05_1/chkpts"
   checkpoint_prefix: "last"  # Options: "best_reward", "lowest_constr", "last"
 
   render: False

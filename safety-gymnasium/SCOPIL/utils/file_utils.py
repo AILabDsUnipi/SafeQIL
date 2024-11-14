@@ -1,6 +1,13 @@
 import os
 import yaml
 import shutil
+import pathlib
+import sys
+
+
+def resolve_source_path():
+    SOURCE_DIR = pathlib.Path(__file__).absolute().parent.parent.parent
+    sys.path.insert(0, str(SOURCE_DIR))
 
 
 def get_config(config_file='config_sac.yaml'):

@@ -667,7 +667,7 @@ def save_test_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plo
 
     # Write results statistics in txt file
     with open(os.path.join(files_dir, 'stats_info.txt'), 'w') as stats_info:
-        # The First element of each tuple is the data, and
+        # The first element of each tuple is the data, and
         # the second is the type of data
         data_to_write = [
             (experiment.test_reward_list, 'Reward'),
@@ -689,7 +689,7 @@ def save_test_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plo
                 '  std: ' + ("-" if single_test else str(np.std(data, ddof=1))) + '\n' +
                 '  median: ' + ("-" if single_test else str(np.median(data))) + '\n' +
                 '  Q1: ' + ("-" if single_test else str(np.quantile(data, 0.25))) + '\n' +
-                '  Q3: ' + ("-" if single_test else str(np.quantile(data, 0.5))) + '\n\n'
+                '  Q3: ' + ("-" if single_test else str(np.quantile(data, 0.75))) + '\n\n'
             )
 
     ### Plot metrics

@@ -1,3 +1,7 @@
+# Add source directory to the system path
+from utils.file_utils import resolve_source_path
+resolve_source_path()
+
 import sys
 import time
 from datetime import timedelta

@@ -104,6 +104,7 @@ class SAC(ABC):
             self.pretrain_epochs = self.config['SAC']['pretrain_epochs']
             self.pretrain_mse_factor = self.config['SAC']['pretrain_mse_factor']
             self.pretrain_nll_factor = self.config['SAC']['pretrain_nll_factor']
+            self.w_std_grads = self.config['SAC']['w_std_grads']
             # Buffer placeholder
             self.replay_buffer: Optional[ReplayBuffer] = None
         # Define policy keyword arguments
@@ -468,7 +469,8 @@ class SAC(ABC):
             observations,
             actions,
             scale_actions=True,
-            adjust_entropy=self.adjust_entropy
+            adjust_entropy=self.adjust_entropy,
+            w_std_grads=self.w_std_grads
         )
         if self.w_entropy_in_constraint_policy_loss_term is True:
             # Entropy regularized NLL
@@ -534,7 +536,8 @@ class SAC(ABC):
                     expert_observations,
                     expert_actions,
                     scale_actions=True,
-                    adjust_entropy=self.adjust_entropy
+                    adjust_entropy=self.adjust_entropy,
+                    w_std_grads=self.w_std_grads
                 )
 
                 # Compute loss

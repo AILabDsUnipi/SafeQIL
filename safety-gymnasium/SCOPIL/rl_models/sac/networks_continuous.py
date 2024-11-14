@@ -835,7 +835,8 @@ class Actor(BasePolicy):
             observations: th.Tensor,
             actions: th.Tensor,
             scale_actions: bool,
-            adjust_entropy: bool
+            adjust_entropy: bool,
+            w_std_grads: bool
     ) -> Tuple[th.Tensor, th.Tensor]:
         """
         Compute log probabilities and the entropy of given actions based on the observations.
@@ -844,6 +845,7 @@ class Actor(BasePolicy):
         :param actions: A tensor of actions to compute the log probabilities and entropy for.
         :param scale_actions: Whether to scale actions from [low, high] to [-1, 1].
         :param adjust_entropy: Whether to divide the actions' entropy with the distribution entropy.
+        :param w_std_grads: Whether to keep std in gradients' graph or not.
         :return: A tuple of tensors (log probabilities, actions entropy).
         """
 
@@ -852,6 +854,8 @@ class Actor(BasePolicy):
 
         # Compute the policy distribution parameters
         mean_actions, log_std, kwargs = self.get_action_dist_params(observations)
+        if w_std_grads is False:
+            log_std = log_std.detach()
 
         # Get the distribution and compute log probabilities
         self.action_dist.proba_distribution(mean_actions, log_std, **kwargs)

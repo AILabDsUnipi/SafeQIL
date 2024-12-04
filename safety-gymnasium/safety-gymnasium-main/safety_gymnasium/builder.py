@@ -100,6 +100,7 @@ class Builder(gymnasium.Env, gymnasium.utils.EzPickle):
         height: int = 256,
         camera_id: int | None = None,
         camera_name: str | None = None,
+        debug_action_smooth: int | None = None,
     ) -> None:
         """Initialize the builder.
 
@@ -122,11 +123,15 @@ class Builder(gymnasium.Env, gymnasium.utils.EzPickle):
             height (int): Height of the rendered image.
             camera_id (int): Camera id to render.
             camera_name (str): Camera name to render.
+            debug_action_smooth (int): The coefficient of smoothing the debug action.
+                Helpful for data collection when actions are either -1, 1, or 0, but
+                the action distribution of the parametrized policy is defined in (-1, 1).
         """
         gymnasium.utils.EzPickle.__init__(self, config=config)
 
         self.task_id: str = task_id
         self.config: dict = config
+        self.debug_action_smooth = debug_action_smooth
         self._seed: int = None
         self._setup_simulation()
 
@@ -142,6 +147,9 @@ class Builder(gymnasium.Env, gymnasium.utils.EzPickle):
         """Set up mujoco the simulation instance."""
         self.task = self._get_task()
         self.set_seed()
+
+        # Set the smooth coefficient for debug action
+        self.task.agent.debug_action_smooth = self.debug_action_smooth
 
     def _get_task(self) -> BaseTask:
         """Instantiate a task object."""

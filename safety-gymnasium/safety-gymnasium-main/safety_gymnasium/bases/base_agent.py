@@ -179,6 +179,7 @@ class BaseAgent(abc.ABC):  # pylint: disable=too-many-instance-attributes
         self.locations: list = [] if locations is None else locations
         self.keepout: float = keepout
         self.rot: float = rot
+        self.debug_action_smooth = None
 
         self.engine: Engine = None
         self._load_model()

@@ -68,4 +68,10 @@ class Car(BaseAgent):
             elif key == glfw.KEY_L:
                 action = np.array([-1, 1])
                 break
+
+        # Smooth action to be in (-1, 1)
+        if self.debug_action_smooth is not None:
+            assert 0 < abs(self.debug_action_smooth) < 1
+            action = self.debug_action_smooth * action
+
         self.apply_action(action)

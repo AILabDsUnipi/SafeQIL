@@ -1,20 +1,28 @@
 game:
     env_id: "SafetyPointGoal1Debug-v0"
-    test_model: True # Dummy, just for triggering the right mode
-    with_human: True # Human alone, or two humans
-    save_data_for_plots: False
 
 NO_ALGO:
   chkpt_dir: "human_alone_exp"
 
 Experiment:
+
+  # Rendering
   render: True  # Should always be True
   render_mode: "human"
   freeze_motion: True
-  debug_: False
-  seed: None  # None or int
+
+  # Debug mode specifications
+  debug_action_smooth: 0.5  # Coefficient for smoothing the actions. Helpful for data collection to avoid extreme values of the action space.
+
+  # Steps
   test_max_games: 40  # print avg reward in the interval
   test_max_timesteps_per_game: 1000  # max steps per trial
+
+  # Saving
+  save_data_for_plots: False
+
+  test_model: True # Dummy, just for triggering the right mode
+  with_human: True # Human alone, or two humans
+  seed: None  # None or int
+  debug_: False
   test_window_size_moving_avg: 10
-
-

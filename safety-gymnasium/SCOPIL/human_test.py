@@ -24,7 +24,7 @@ def main(argv):
 
     # Check if the selected config file is suitable for the current experiment
     assert config["Experiment"]["test_model"] is True
-    assert config["game"]["with_human"] is True
+    assert config["Experiment"]["with_human"] is True
     assert config["Experiment"]["render_mode"] == "human", "When human plays, the 'render_mode' should be 'human' !"
     assert config["Experiment"]["render"] is True
 
@@ -32,7 +32,8 @@ def main(argv):
     env = safety_gymnasium.make(
         config["game"]["env_id"],
         render_mode=config["Experiment"]["render_mode"],
-        max_episode_steps=config["Experiment"]["test_max_timesteps_per_game"]
+        max_episode_steps=config["Experiment"]["test_max_timesteps_per_game"],
+        debug_action_smooth=config["Experiment"]["debug_action_smooth"],
     )
 
     # Get seed

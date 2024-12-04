@@ -96,20 +96,24 @@ class SAC(ABC):
             self.constraint_lambda: Optional[th.Tensor] = None
             self.clip_grad_norm: bool = self.config['SAC']['clip_grad_norm']
             self.max_grad_norm: int = self.config['SAC']['max_grad_norm']
-            self.adjust_entropy = self.config['SAC']['adjust_entropy']
-            self.w_mse = self.config['SAC']['w_mse']
-            self.mse_factor = self.config['SAC']['mse_factor']
-            self.nll_factor = self.config['SAC']['nll_factor']
-            self.pretrain = self.config['SAC']['pretrain']
-            self.pretrain_epochs = self.config['SAC']['pretrain_epochs']
-            self.pretrain_mse_factor = self.config['SAC']['pretrain_mse_factor']
-            self.pretrain_nll_factor = self.config['SAC']['pretrain_nll_factor']
-            self.w_std_grads = self.config['SAC']['w_std_grads']
+            self.adjust_entropy: bool = self.config['SAC']['adjust_entropy']
+            self.w_mse: bool = self.config['SAC']['w_mse']
+            self.mse_factor: float = self.config['SAC']['mse_factor']
+            self.nll_factor: float = self.config['SAC']['nll_factor']
+            self.pretrain: bool = self.config['SAC']['pretrain']
+            self.pretrain_epochs: int = self.config['SAC']['pretrain_epochs']
+            self.pretrain_mse_factor: float = self.config['SAC']['pretrain_mse_factor']
+            self.pretrain_nll_factor: float = self.config['SAC']['pretrain_nll_factor']
+            self.w_std_grads: bool = self.config['SAC']['w_std_grads']
+            self.w_kl_div: bool = self.config['SAC']['w_kl_div']
+            self.w_q_values: bool = self.config['SAC']['w_q_values']
+            self.w_max_min: bool = self.config['SAC']['w_max_min']
+            self.w_lower_bound: bool = self.config['SAC']['w_lower_bound']
             # Buffer placeholder
             self.replay_buffer: Optional[ReplayBuffer] = None
         # Define policy keyword arguments
         self.use_sde: bool = self.config['SAC']['use_sde']
-        self.policy_kwargs = {
+        self.policy_kwargs: dict = {
             'net_arch': [self.config['SAC']['layer1_size'], self.config['SAC']['layer2_size']],
             'log_std_init': self.config['SAC']['log_std_init'],
             'use_sde': self.use_sde
@@ -214,8 +218,6 @@ class SAC(ABC):
             if self.w_constraint_optimization is True:
                 self.initial_lambda_constraint = self.config['SAC']['initial_lambda_constraint']
                 self.constraint_lambda_lr = self.config['SAC']['lambda_constraint_lr']
-                self.w_entropy_in_constraint_policy_loss_term = \
-                    self.config['SAC']['w_entropy_in_constraint_policy_loss_term']
                 self.w_dual_grad_desc = self.config['SAC']['w_dual_grad_desc']
                 # Define 'constraint_lambda'
                 self.constraint_lambda = th.tensor(
@@ -251,9 +253,12 @@ class SAC(ABC):
                     shuffle=True,
                     drop_last=self.drop_last
                 )
-                # Define the MSE loss function
-                if self.pretrain is True or self.w_mse is True:
-                    self.mse_loss_func = th.nn.MSELoss()
+                if self.w_kl_div is True:
+                    self.w_entropy_in_constraint_policy_loss_term = \
+                        self.config['SAC']['w_entropy_in_constraint_policy_loss_term']
+                    # Define the MSE loss function
+                    if self.pretrain is True or self.w_mse is True:
+                        self.mse_loss_func = th.nn.MSELoss()
 
     def _create_aliases(self) -> None:
         self.actor = self.policy.actor
@@ -312,6 +317,27 @@ class SAC(ABC):
         mean_cur_dem_probs = []
         min_cur_dem_probs = []
         max_cur_dem_probs = []
+        constraint_critic_loss_term_values = []
+        critic_loss_values_wo_constraint_term = []
+        lower_bound_constraint_critic_loss_term_values = []
+        mean_cur_dem_logprobs_value = None
+        min_cur_dem_logprobs_value = None
+        max_cur_dem_logprobs_value = None
+        mean_cur_dem_probs_value = None
+        min_cur_dem_probs_value = None
+        max_cur_dem_probs_value = None
+        mean_cur_dem_qvals_value = None
+        min_cur_dem_qvals_value = None
+        max_cur_dem_qvals_value = None
+        mean_dem_logprobs_value = None
+        min_dem_logprobs_value = None
+        max_dem_logprobs_value = None
+        mean_dem_probs_value = None
+        min_dem_probs_value = None
+        max_dem_probs_value = None
+        mean_dem_qvals_value = None
+        min_dem_qvals_value = None
+        max_dem_qvals_value = None
 
         for gradient_step in range(self.gradient_steps):
 
@@ -388,9 +414,45 @@ class SAC(ABC):
             min_cur_qvals.append(min_current_q_values.min().item())
             max_cur_qvals.append(min_current_q_values.max().item())
 
-            # Compute critic loss
+            ## Compute critic loss
+            # SAC critic loss
             critic_loss = 0.5 * sum(F.mse_loss(current_q, target_q_values) for current_q in current_q_values)
             assert isinstance(critic_loss, th.Tensor)  # for type checker
+            # Constraint critic loss
+            if self.w_q_values is True:
+                (
+                    constraint_critic_loss,
+                    lower_bound_constraint_critic_loss,
+                    mean_cur_dem_logprobs_value,
+                    min_cur_dem_logprobs_value,
+                    max_cur_dem_logprobs_value,
+                    mean_cur_dem_probs_value,
+                    min_cur_dem_probs_value,
+                    max_cur_dem_probs_value,
+                    mean_cur_dem_qvals_value,
+                    min_cur_dem_qvals_value,
+                    max_cur_dem_qvals_value,
+                    mean_dem_logprobs_value,
+                    min_dem_logprobs_value,
+                    max_dem_logprobs_value,
+                    mean_dem_probs_value,
+                    min_dem_probs_value,
+                    max_dem_probs_value,
+                    mean_dem_qvals_value,
+                    min_dem_qvals_value,
+                    max_dem_qvals_value
+                 ) = self.calc_constraint_q_loss_term(
+                    [expert_actions, expert_observations], current_q_values, w_max_min=self.w_max_min
+                )
+                # Keep it for logs
+                critic_loss_values_wo_constraint_term.append(critic_loss.item())
+                constraint_critic_loss_term_values.append(constraint_critic_loss.item())
+                lower_bound_constraint_critic_loss_term_values.append(lower_bound_constraint_critic_loss.item())
+                # Add the constraint term to the critic loss
+                critic_loss += self.constraint_lambda.item() * constraint_critic_loss
+                if self.w_lower_bound is True:
+                    critic_loss += self.constraint_lambda.item() * lower_bound_constraint_critic_loss
+            # Keep for logs the total critic loss
             critic_losses.append(critic_loss.item())  # type: ignore[union-attr]
 
             # Optimize the critic
@@ -411,7 +473,7 @@ class SAC(ABC):
             max_qvals.append(q_values_pi.max().item())
 
             ### Actor loss wrt constraints
-            if self.w_constraint_optimization is True:
+            if self.w_kl_div is True:
                 # Keep actor loss without the constraint term for logs
                 policy_loss_value_wo_constraint_term = actor_loss.item()
                 policy_loss_value_wo_constraint_terms.append(policy_loss_value_wo_constraint_term)
@@ -446,6 +508,9 @@ class SAC(ABC):
                 constraint_policy_loss_term_values.append(constraint_policy_loss_term_value)
                 constraint_policy_loss_nll_term_values.append(constraint_policy_loss_nll_term_value)
                 constraint_policy_loss_mse_term_values.append(constraint_policy_loss_mse_term_value)
+
+            # Keep the logs for the constraint optimization
+            if self.w_kl_div is True or self.w_q_values is True:
                 mean_cur_dem_logprobs.append(mean_cur_dem_logprobs_value)
                 min_cur_dem_logprobs.append(min_cur_dem_logprobs_value)
                 max_cur_dem_logprobs.append(max_cur_dem_logprobs_value)
@@ -481,7 +546,16 @@ class SAC(ABC):
             ## Computation of 'constraint_lambda' loss and optimizer step
             if self.w_constraint_optimization is True:
                 # Calculate lambda loss
-                constraint_lambda_loss = self.calc_constraint_lambda_loss([expert_actions, expert_observations])
+                if self.w_kl_div is True:
+                    constraint_lambda_loss = self.calc_constraint_lambda_loss_w_kl_div(
+                        [expert_actions, expert_observations]
+                    )
+                elif self.w_q_values is True:
+                    constraint_lambda_loss = self.calc_constraint_lambda_loss_w_q_values(
+                        [expert_actions, expert_observations], current_q_values
+                    )
+                else:
+                    raise NotImplementedError('The constraint optimization is not implemented for this case.')
                 # Keep it for logs
                 constraint_lambda_loss_value = constraint_lambda_loss.item()
                 constraint_lambda_loss_values.append(constraint_lambda_loss_value)
@@ -525,12 +599,11 @@ class SAC(ABC):
         mean_cur_dem_probs_mean = np.nan
         min_cur_dem_probs_mean = np.nan
         max_cur_dem_probs_mean = np.nan
+        critic_loss_values_wo_constraint_term_mean = np.nan
+        constraint_critic_loss_term_values_mean = np.nan
+        lower_bound_constraint_critic_loss_term_values_mean = np.nan
         if self.w_constraint_optimization is True:
-            constraint_policy_loss_term_values_mean = mean(constraint_policy_loss_term_values)
-            constraint_policy_loss_nll_term_values_mean = mean(constraint_policy_loss_nll_term_values)
-            constraint_policy_loss_mse_term_values_mean = mean(constraint_policy_loss_mse_term_values)
             constraint_lambda_loss_values_mean = mean(constraint_lambda_loss_values)
-            policy_loss_value_wo_constraint_terms_mean = mean(policy_loss_value_wo_constraint_terms)
             constraint_lambdas_mean = mean(constraint_lambdas)
             mean_dem_qvals_mean = mean(mean_dem_qvals)
             min_dem_qvals_mean = mean(min_dem_qvals)
@@ -550,6 +623,17 @@ class SAC(ABC):
             mean_cur_dem_probs_mean = mean(mean_cur_dem_probs)
             min_cur_dem_probs_mean = mean(min_cur_dem_probs)
             max_cur_dem_probs_mean = mean(max_cur_dem_probs)
+            if self.w_kl_div is True:
+                constraint_policy_loss_term_values_mean = mean(constraint_policy_loss_term_values)
+                constraint_policy_loss_nll_term_values_mean = mean(constraint_policy_loss_nll_term_values)
+                constraint_policy_loss_mse_term_values_mean = mean(constraint_policy_loss_mse_term_values)
+                policy_loss_value_wo_constraint_terms_mean = mean(policy_loss_value_wo_constraint_terms)
+            if self.w_q_values is True:
+                critic_loss_values_wo_constraint_term_mean = mean(critic_loss_values_wo_constraint_term)
+                constraint_critic_loss_term_values_mean = mean(constraint_critic_loss_term_values)
+                lower_bound_constraint_critic_loss_term_values_mean = mean(
+                    lower_bound_constraint_critic_loss_term_values
+                )
         if self.clip_grad_norm is True:
             grad_norms_clipped_mean = mean(grad_norms_clipped)
 
@@ -600,12 +684,30 @@ class SAC(ABC):
             'max_cur_dem_logprobs': max_cur_dem_logprobs_mean,
             'mean_cur_dem_probs': mean_cur_dem_probs_mean,
             'min_cur_dem_probs': min_cur_dem_probs_mean,
-            'max_cur_dem_probs': max_cur_dem_probs_mean
+            'max_cur_dem_probs': max_cur_dem_probs_mean,
+            'critic_loss_values_wo_constraint_term': critic_loss_values_wo_constraint_term_mean,
+            'constraint_critic_loss_term_values': constraint_critic_loss_term_values_mean,
+            'lower_bound_constraint_critic_loss_term_values': lower_bound_constraint_critic_loss_term_values_mean
         }
 
-    def calc_constraint_lambda_loss(self, demonstrations):
+    def calc_constraint_lambda_loss_w_kl_div(self, demonstrations):
+
         constraint_policy_loss_term, *_ = self.calc_constraint_policy_loss_term(demonstrations)
         constraint_lambda_loss = -self.constraint_lambda.squeeze(0) * constraint_policy_loss_term.item()
+
+        return constraint_lambda_loss
+
+    def calc_constraint_lambda_loss_w_q_values(self, demonstrations, rollout_q_values):
+
+        constraint_critic_loss, lower_bound_constraint_critic_loss, *_ = self.calc_constraint_q_loss_term(
+            demonstrations,
+            rollout_q_values,
+            w_max_min=False
+        )
+
+        constraint_lambda_loss = -self.constraint_lambda.squeeze(0) * constraint_critic_loss.item()
+        if self.w_lower_bound is True:
+            constraint_lambda_loss = -self.constraint_lambda.squeeze(0) * lower_bound_constraint_critic_loss.item()
 
         return constraint_lambda_loss
 
@@ -622,17 +724,7 @@ class SAC(ABC):
 
         actions = demonstrations[0]
         observations = demonstrations[1]
-
-        assert actions.shape[1:] == self.action_space.shape, \
-            (
-                    "actions.shape: " + str(actions.shape) +
-                    " self.action_space.shape: " + str(self.action_space.shape)
-            )
-        assert observations.shape[1:] == self.observation_space.shape, \
-            (
-                    "observations.shape: " + str(observations.shape) +
-                    " self.observation_space.shape: " + str(self.observation_space.shape)
-            )
+        self.check_demonstrations_format(actions, observations)
 
         # Log probabilities and entropy of the given actions
         log_probs, actions_entropy = self.actor.evaluate_actions(
@@ -677,7 +769,7 @@ class SAC(ABC):
         min_qf, _ = th.min(q_values, dim=1, keepdim=True)
         mean_cur_dem_qvals_value = th.mean(min_qf).item()
         min_cur_dem_qvals_value = min_qf.min().item()
-        max_cur_dem_qvals = min_qf.max().item()
+        max_cur_dem_qvals_value = min_qf.max().item()
 
         # Keep logs for probs of the policy actions
         mean_dem_logprobs_value = th.mean(log_probs_pi).item()
@@ -706,7 +798,7 @@ class SAC(ABC):
             max_cur_dem_probs_value,
             mean_cur_dem_qvals_value,
             min_cur_dem_qvals_value,
-            max_cur_dem_qvals,
+            max_cur_dem_qvals_value,
             mean_dem_logprobs_value,
             min_dem_logprobs_value,
             max_dem_logprobs_value,
@@ -717,6 +809,161 @@ class SAC(ABC):
             min_dem_qvals_value,
             max_dem_qvals_value
         )
+
+    def calc_constraint_q_loss_term(
+            self,
+            demonstrations: List[th.Tensor],
+            rollout_q_values: Tuple[th.Tensor],
+            w_max_min: bool = True
+    ) -> (
+            th.Tensor,
+            th.Tensor,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+    ):
+        """
+        Calculates policy loss wrt the specified constraints
+
+        :param demonstrations: List with: 1) actions of type torch.Tensor with dtype=torch.float32
+                                             and shape=[batch_size, *action_space.shape],
+                                      and 2) observations of type torch.Tensor with dtype=torch.float32 and
+                                             shape=[batch_size, *observation_space.shape].
+        :param rollout_q_values: Tuple with the Q-values of the rollout state-action pairs.
+            Note that the tuple consists of two tensors, one for the estimated Q-values of each critic.
+        :param w_max_min: Boolean, which indicates when to use the "max" (and/or "min") operator or not.
+
+        :return: Critic Q loss wrt constraints.
+        """
+
+        actions = demonstrations[0]
+        observations = demonstrations[1]
+        self.check_demonstrations_format(actions, observations)
+
+        ## Compute the constraint critic loss
+        # Get the minimum Q-value of the demonstrated state-action pairs to use it as the target (without grads)
+        scaled_expert_actions = self.scale_and_clamp_demo_actions(actions)
+        dem_q_values = self.critic(observations, scaled_expert_actions)
+        dem_q_values_catted = th.cat(dem_q_values, dim=1)
+        min_dem_q_value = th.min(dem_q_values_catted).detach()
+        # constraint critic loss
+        constraint_critic_loss = 0.5 * sum(
+            th.mean(
+                th.pow(
+                    (th.maximum(rollout_q, min_dem_q_value) if w_max_min is True else rollout_q) - min_dem_q_value,
+                    2
+                )
+            ) for rollout_q in rollout_q_values
+        )
+
+        ## Compute the lower bound constraint loss
+        # Get the maximum Q-value of the rollout state-action pairs to use it as the target (without grads)
+        max_rollout_q_value = th.max(th.cat(rollout_q_values, dim=1)).detach()
+        # lower bound constraint loss
+        lower_bound_constraint_critic_loss = 0.5 * sum(
+            th.mean(
+                th.pow(
+                    (th.minimum(dem_q, max_rollout_q_value) if w_max_min is True else dem_q) - max_rollout_q_value,
+                    2
+                )
+            ) for dem_q in dem_q_values
+        )
+
+        ## Keep for logs
+        # Log probabilities of the given actions
+        log_probs, _ = self.actor.evaluate_actions(
+            observations,
+            actions,
+            scale_actions=True,
+            adjust_entropy=False,
+            w_std_grads=False
+        )
+        mean_cur_dem_logprobs_value = th.mean(log_probs).item()
+        min_cur_dem_logprobs_value = log_probs.min().item()
+        max_cur_dem_logprobs_value = log_probs.max().item()
+        mean_cur_dem_probs_value = th.mean(log_probs).exp().item()
+        min_cur_dem_probs_value = th.min(log_probs).exp().item()
+        max_cur_dem_probs_value = th.max(log_probs).exp().item()
+        # Q-values of the demonstrated actions
+        min_dem_q_values, _ = th.min(dem_q_values_catted, dim=1, keepdim=True)
+        mean_cur_dem_qvals_value = th.mean(min_dem_q_values).item()
+        min_cur_dem_qvals_value = min_dem_q_values.min().item()
+        max_cur_dem_qvals_value = min_dem_q_values.max().item()
+        # Probs of the policy actions
+        actions_pi, log_probs_pi = self.actor.action_log_prob(observations)
+        mean_dem_logprobs_value = th.mean(log_probs_pi).item()
+        min_dem_logprobs_value = log_probs_pi.min().item()
+        max_dem_logprobs_value = log_probs_pi.max().item()
+        mean_dem_probs_value = th.mean(log_probs_pi).exp().item()
+        min_dem_probs_value = log_probs_pi.min().exp().item()
+        max_dem_probs_value = log_probs_pi.max().exp().item()
+        # Q-values of the demonstrated actions
+        q_values_pi = th.cat(self.critic(observations, actions_pi), dim=1)
+        min_q_values_pi, _ = th.min(q_values_pi, dim=1, keepdim=True)
+        mean_dem_qvals_value = th.mean(min_q_values_pi).item()
+        min_dem_qvals_value = min_q_values_pi.min().item()
+        max_dem_qvals_value = min_q_values_pi.max().item()
+
+        return (
+            constraint_critic_loss,
+            lower_bound_constraint_critic_loss,
+            mean_cur_dem_logprobs_value,
+            min_cur_dem_logprobs_value,
+            max_cur_dem_logprobs_value,
+            mean_cur_dem_probs_value,
+            min_cur_dem_probs_value,
+            max_cur_dem_probs_value,
+            mean_cur_dem_qvals_value,
+            min_cur_dem_qvals_value,
+            max_cur_dem_qvals_value,
+            mean_dem_logprobs_value,
+            min_dem_logprobs_value,
+            max_dem_logprobs_value,
+            mean_dem_probs_value,
+            min_dem_probs_value,
+            max_dem_probs_value,
+            mean_dem_qvals_value,
+            min_dem_qvals_value,
+            max_dem_qvals_value
+        )
+
+    def check_demonstrations_format(self, actions, observations):
+        """
+        Check if the provided demonstration samples have the right format.
+
+        :param actions: actions of type torch.Tensor with dtype=torch.float32
+            and shape=[batch_size, *action_space.shape].
+        :param observations: observations of type torch.Tensor with dtype=torch.float32 and
+            shape=[batch_size, *observation_space.shape].
+
+        :return:
+        """
+
+        assert actions.shape[1:] == self.action_space.shape, \
+            (
+                    "actions.shape: " + str(actions.shape) +
+                    " self.action_space.shape: " + str(self.action_space.shape)
+            )
+        assert observations.shape[1:] == self.observation_space.shape, \
+            (
+                    "observations.shape: " + str(observations.shape) +
+                    " self.observation_space.shape: " + str(self.observation_space.shape)
+            )
 
     def get_samples_from_demonstrations(self):
         expert_actions, expert_observations = next(iter(self.train_loader))

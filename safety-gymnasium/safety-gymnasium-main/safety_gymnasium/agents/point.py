@@ -65,4 +65,10 @@ class Point(BaseAgent):
                 action[1] += 1
             elif key == glfw.KEY_L:
                 action[1] -= 1
+
+        # Smooth action to be in (-1, 1)
+        if self.debug_action_smooth is not None:
+            assert 0 < abs(self.debug_action_smooth) < 1
+            action = self.debug_action_smooth * action
+
         self.apply_action(action)

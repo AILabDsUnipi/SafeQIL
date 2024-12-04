@@ -23,30 +23,37 @@ SAC:
   buffer_memory_size: 1000000
   update_every_steps: 1  # Steps interval between two consecutive NN updates
   gradient_steps: 1  # How many steps to perform when updating
-
-  # Constraint optimization
-  initial_lambda_constraint: 1.05
-  lambda_constraint_lr: 0.0003
-  w_constraint_optimization: True
-  w_dual_grad_desc: True
-  w_entropy_in_constraint_policy_loss_term: True
   clip_grad_norm: False
   max_grad_norm: 5
+
+  ## Constraint optimization
+  # General parameters
+  w_constraint_optimization: True
+  w_dual_grad_desc: False
+  initial_lambda_constraint: 1.05
+  lambda_constraint_lr: 0.0003
+  # For KL Div approach
+  w_kl_div: False
+  w_entropy_in_constraint_policy_loss_term: False
   adjust_entropy: False
-  w_mse: True
+  w_mse: False
   mse_factor: 1.0
   nll_factor: 0.001
-  pretrain: True
+  pretrain: False
   only_pretrain: False
   pretrain_epochs: 10
   pretrain_mse_factor: 1.0
   pretrain_nll_factor: 0.001
   w_std_grads: False
+  # For Q-values approach
+  w_q_values: True
+  w_max_min: False
+  w_lower_bound: True
 
   # Demonstrations
-  expert_dataset_path: '/home/georgepap/PycharmProjects/HAI-MAZE_master/experiments/safety_gymnasium/human_alone_exp_human_data_simple/tmp/human_alone_exp_human_data_simple_1/demonstrations'
+  expert_dataset_path: '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/demonstrations'
   load_demos_in_memory: True
-  smooth_actions: True
+  smooth_actions: False
   smooth_factor: 0.99
 
   # Results
@@ -80,7 +87,7 @@ Experiment:
   render: False
   debug_: False
   test_window_size_moving_avg: 10
-  seed: 2024  # None or int
+  seed: None # 2024  # None or int
   device: "cuda"  # "cuda" or "cpu"
 
 

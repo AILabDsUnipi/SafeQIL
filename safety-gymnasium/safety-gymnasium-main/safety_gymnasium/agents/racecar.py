@@ -65,4 +65,10 @@ class Racecar(BaseAgent):
                 action[1] += 0.5
             elif key == glfw.KEY_L:
                 action[1] -= 0.5
+
+        # Smooth action to be in (-20, 20) and (-0.5, 0.5), respectively.
+        if self.debug_action_smooth is not None:
+            assert 0 < abs(self.debug_action_smooth) < 1
+            action = self.debug_action_smooth * action
+
         self.apply_action(action)

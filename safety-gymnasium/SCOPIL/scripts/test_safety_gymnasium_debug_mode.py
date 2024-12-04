@@ -80,7 +80,7 @@ while True:
 
 env.close()
 
-# render_mode (str): Render mode, can be 'human', 'rgb_array', 'depth_array'.
+# render_mode (str): Render mode can be 'human', 'rgb_array', 'depth_array'.
 # When 'rbg_array' is selected, the resulted image should have shape [256, 256, 3] for all the following environments.
 
 ## Tasks explanation based on: https://github.com/openai/safety-gym, and observation shape.

@@ -35,27 +35,35 @@ def main(argv):
     # Check the consistency between 'start_steps' and 'batch_size'
     assert (config['SAC']['start_steps'] >= config['SAC']['batch_size'])
     # Check the consistency between 'w_constraint_optimization' and 'w_dual_grad_desc'
-    assert not (
-            config['SAC']['w_dual_grad_desc'] is True and
-            config['SAC']['w_constraint_optimization'] is False
-    )
-    # Check the consistency between 'w_entropy_in_constraint_policy_loss_term' and 'w_constraint_optimization'
+    assert not (config['SAC']['w_dual_grad_desc'] is True and config['SAC']['w_constraint_optimization'] is False)
+    # Check the consistency between 'w_kl_div' and 'w_q_values'
+    assert not (config['SAC']['w_q_values'] is True and config['SAC']['w_kl_div'] is True)
+    # Check the consistency between 'w_constraint_optimization' and 'w_kl_div'
+    assert not (config['SAC']['w_kl_div'] is True and config['SAC']['w_constraint_optimization'] is False)
+    # Check the consistency between 'w_entropy_in_constraint_policy_loss_term' and 'w_kl_div'
     assert not (
             config['SAC']['w_entropy_in_constraint_policy_loss_term'] is True and
-            config['SAC']['w_constraint_optimization'] is False
+            config['SAC']['w_kl_div'] is False
     )
     # Check the consistency between 'w_entropy_in_constraint_policy_loss_term' and 'adjust_entropy'
     assert not (
             config['SAC']['adjust_entropy'] is True and
             config['SAC']['w_entropy_in_constraint_policy_loss_term'] is False
-
     )
     # Check the consistency between 'pretrain' and 'w_constraint_optimization'
-    assert not (config['SAC']['pretrain'] is True and config['SAC']['w_constraint_optimization'] is False)
+    assert not (config['SAC']['pretrain'] is True and config['SAC']['w_kl_div'] is False)
     # Check the consistency between 'pretrain' and 'only_pretrain'
     assert not (config['SAC']['only_pretrain'] is True and config['SAC']['pretrain'] is False)
     # Check the consistency between 'w_std_grads' and 'w_constraint_optimization'
-    assert not (config['SAC']['w_std_grads'] is True and config['SAC']['w_constraint_optimization'] is False)
+    assert not (config['SAC']['w_std_grads'] is True and config['SAC']['w_kl_div'] is False)
+    # Check the consistency between 'w_mse' and 'w_kl_div'
+    assert not (config['SAC']['w_mse'] is True and config['SAC']['w_kl_div'] is False)
+    # Check the consistency between 'w_constraint_optimization' and 'w_q_values'
+    assert not (config['SAC']['w_q_values'] is True and config['SAC']['w_constraint_optimization'] is False)
+    # Check the consistency between 'w_max_min' and 'w_q_values'
+    assert not (config['SAC']['w_max_min'] is True and config['SAC']['w_q_values'] is False)
+    # Check the consistency between 'w_lower_bound' and 'w_q_values'
+    assert not (config['SAC']['w_lower_bound'] is True and config['SAC']['w_q_values'] is False)
 
     # Create the environment
     env = safety_gymnasium.make(

@@ -109,6 +109,7 @@ class SAC(ABC):
             self.w_q_values: bool = self.config['SAC']['w_q_values']
             self.w_max_min: bool = self.config['SAC']['w_max_min']
             self.w_lower_bound: bool = self.config['SAC']['w_lower_bound']
+            self.w_use_target_critic: bool = self.config['SAC']['w_use_target_critic']
             # Buffer placeholder
             self.replay_buffer: Optional[ReplayBuffer] = None
         # Define policy keyword arguments
@@ -442,7 +443,9 @@ class SAC(ABC):
                     min_dem_qvals_value,
                     max_dem_qvals_value
                  ) = self.calc_constraint_q_loss_term(
-                    [expert_actions, expert_observations], current_q_values, w_max_min=self.w_max_min
+                    [expert_actions, expert_observations],
+                    [replay_data.actions, replay_data.observations],
+                    current_q_values
                 )
                 # Keep it for logs
                 critic_loss_values_wo_constraint_term.append(critic_loss.item())
@@ -552,7 +555,9 @@ class SAC(ABC):
                     )
                 elif self.w_q_values is True:
                     constraint_lambda_loss = self.calc_constraint_lambda_loss_w_q_values(
-                        [expert_actions, expert_observations], current_q_values
+                        [expert_actions, expert_observations],
+                        [replay_data.actions, replay_data.observations],
+                        current_q_values
                     )
                 else:
                     raise NotImplementedError('The constraint optimization is not implemented for this case.')
@@ -697,12 +702,12 @@ class SAC(ABC):
 
         return constraint_lambda_loss
 
-    def calc_constraint_lambda_loss_w_q_values(self, demonstrations, rollout_q_values):
+    def calc_constraint_lambda_loss_w_q_values(self, demonstrations, rollout_data, rollout_q_values):
 
         constraint_critic_loss, lower_bound_constraint_critic_loss, *_ = self.calc_constraint_q_loss_term(
             demonstrations,
-            rollout_q_values,
-            w_max_min=False
+            rollout_data,
+            rollout_q_values
         )
 
         constraint_lambda_loss = -self.constraint_lambda.squeeze(0) * constraint_critic_loss.item()
@@ -813,8 +818,8 @@ class SAC(ABC):
     def calc_constraint_q_loss_term(
             self,
             demonstrations: List[th.Tensor],
+            rollout_data: List[th.Tensor],
             rollout_q_values: Tuple[th.Tensor],
-            w_max_min: bool = True
     ) -> (
             th.Tensor,
             th.Tensor,
@@ -844,16 +849,21 @@ class SAC(ABC):
                                              and shape=[batch_size, *action_space.shape],
                                       and 2) observations of type torch.Tensor with dtype=torch.float32 and
                                              shape=[batch_size, *observation_space.shape].
+        :param rollout_data: List similar to 'demonstrations'.
         :param rollout_q_values: Tuple with the Q-values of the rollout state-action pairs.
             Note that the tuple consists of two tensors, one for the estimated Q-values of each critic.
-        :param w_max_min: Boolean, which indicates when to use the "max" (and/or "min") operator or not.
 
         :return: Critic Q loss wrt constraints.
         """
 
+        # Demonstrations' state-action pairs
         actions = demonstrations[0]
         observations = demonstrations[1]
         self.check_demonstrations_format(actions, observations)
+
+        # Rollouts' state-action pairs
+        rollout_actions = rollout_data[0]
+        rollout_observations = rollout_data[1]
 
         ## Compute the constraint critic loss
         # Get the minimum Q-value of the demonstrated state-action pairs to use it as the target (without grads)
@@ -861,11 +871,13 @@ class SAC(ABC):
         dem_q_values = self.critic(observations, scaled_expert_actions)
         dem_q_values_catted = th.cat(dem_q_values, dim=1)
         min_dem_q_value = th.min(dem_q_values_catted).detach()
-        # constraint critic loss
+        if self.w_use_target_critic is True:
+            min_dem_q_value = th.min(th.cat(self.critic_target(observations, scaled_expert_actions), dim=1)).detach()
+        # Constraint critic loss
         constraint_critic_loss = 0.5 * sum(
             th.mean(
                 th.pow(
-                    (th.maximum(rollout_q, min_dem_q_value) if w_max_min is True else rollout_q) - min_dem_q_value,
+                    (th.maximum(rollout_q, min_dem_q_value) if self.w_max_min is True else rollout_q) - min_dem_q_value,
                     2
                 )
             ) for rollout_q in rollout_q_values
@@ -874,11 +886,15 @@ class SAC(ABC):
         ## Compute the lower bound constraint loss
         # Get the maximum Q-value of the rollout state-action pairs to use it as the target (without grads)
         max_rollout_q_value = th.max(th.cat(rollout_q_values, dim=1)).detach()
-        # lower bound constraint loss
+        if self.w_use_target_critic is True:
+            max_rollout_q_value = th.max(
+                th.cat(self.critic_target(rollout_observations, rollout_actions), dim=1)
+            ).detach()
+        # Lower bound constraint loss
         lower_bound_constraint_critic_loss = 0.5 * sum(
             th.mean(
                 th.pow(
-                    (th.minimum(dem_q, max_rollout_q_value) if w_max_min is True else dem_q) - max_rollout_q_value,
+                    (th.minimum(dem_q, max_rollout_q_value) if self.w_max_min is True else dem_q) - max_rollout_q_value,
                     2
                 )
             ) for dem_q in dem_q_values

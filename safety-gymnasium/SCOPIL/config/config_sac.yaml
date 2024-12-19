@@ -47,8 +47,9 @@ SAC:
   w_std_grads: False
   # For Q-values approach
   w_q_values: True
-  w_max_min: False
+  w_max_min: True
   w_lower_bound: True
+  w_use_target_critic: True
 
   # Demonstrations
   expert_dataset_path: '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/demonstrations'

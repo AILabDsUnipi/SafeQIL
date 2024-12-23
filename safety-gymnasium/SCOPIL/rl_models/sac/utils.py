@@ -1,8 +1,7 @@
 # Code based on: https://github.com/DLR-RM/stable-baselines3/tree/master/stable_baselines3
 
 import warnings
-from enum import Enum
-from typing import Dict, Union, Any, NamedTuple, Iterable, List
+from typing import Dict, Union, Any, Iterable, List
 import random
 import functools
 from itertools import zip_longest
@@ -10,27 +9,10 @@ from itertools import zip_longest
 from gymnasium import spaces
 import numpy as np
 import torch as th
-from torch.nn import functional as F
 
 
 TensorDict = Dict[str, th.Tensor]
 PyTorchObs = Union[th.Tensor, TensorDict]
-
-
-class RolloutReturn(NamedTuple):
-    episode_timesteps: int
-    n_episodes: int
-    continue_training: bool
-
-
-class TrainFrequencyUnit(Enum):
-    STEP = "step"
-    EPISODE = "episode"
-
-
-class TrainFreq(NamedTuple):
-    frequency: int
-    unit: TrainFrequencyUnit  # either "step" or "episode"
 
 
 def zip_strict(*iterables: Iterable) -> Iterable:
@@ -89,34 +71,6 @@ def get_parameters_by_name(model: th.nn.Module, included_names: Iterable[str]) -
         that matches the queried names.
     """
     return [param for name, param in model.state_dict().items() if any([key in name for key in included_names])]
-
-
-def should_collect_more_steps(
-    train_freq: TrainFreq,
-    num_collected_steps: int,
-    num_collected_episodes: int,
-) -> bool:
-    """
-    Helper used in ``collect_rollouts()`` of off-policy algorithms
-    to determine the termination condition.
-
-    :param train_freq: How much experience should be collected before updating the policy.
-    :param num_collected_steps: The number of already collected steps.
-    :param num_collected_episodes: The number of already collected episodes.
-    :return: Whether to continue or not collecting experience
-        by doing rollouts of the current policy.
-    """
-    if train_freq.unit == TrainFrequencyUnit.STEP:
-        return num_collected_steps < train_freq.frequency
-
-    elif train_freq.unit == TrainFrequencyUnit.EPISODE:
-        return num_collected_episodes < train_freq.frequency
-
-    else:
-        raise ValueError(
-            "The unit of the `train_freq` must be either TrainFrequencyUnit.STEP "
-            f"or TrainFrequencyUnit.EPISODE not '{train_freq.unit}'!"
-        )
 
 
 def recursive_getattr(obj: Any, attr: str, *args) -> Any:

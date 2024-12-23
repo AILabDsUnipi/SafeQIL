@@ -1,4 +1,5 @@
 # Code based on: https://github.com/DLR-RM/stable-baselines3/tree/master/stable_baselines3/sac
+
 import os
 import pathlib
 from typing import Dict, List, Optional, Tuple, TypeVar, Union
@@ -12,7 +13,7 @@ from gymnasium import spaces
 from torch.nn import functional as F
 
 from .buffer import ReplayBuffer
-
+from .discriminator import Discriminator
 from .networks_continuous import Actor, CnnPolicy, MlpPolicy, SACPolicy, ContinuousCritic
 from .utils import (
     get_device,
@@ -110,6 +111,7 @@ class SAC(ABC):
             self.w_max_min: bool = self.config['SAC']['w_max_min']
             self.w_lower_bound: bool = self.config['SAC']['w_lower_bound']
             self.w_use_target_critic: bool = self.config['SAC']['w_use_target_critic']
+            self.w_discriminator: bool = self.config['SAC']['w_discriminator']
             # Buffer placeholder
             self.replay_buffer: Optional[ReplayBuffer] = None
         # Define policy keyword arguments
@@ -220,21 +222,6 @@ class SAC(ABC):
                 self.initial_lambda_constraint = self.config['SAC']['initial_lambda_constraint']
                 self.constraint_lambda_lr = self.config['SAC']['lambda_constraint_lr']
                 self.w_dual_grad_desc = self.config['SAC']['w_dual_grad_desc']
-                # Define 'constraint_lambda'
-                self.constraint_lambda = th.tensor(
-                    [self.initial_lambda_constraint],
-                    dtype=th.float32,
-                    requires_grad=self.w_dual_grad_desc,
-                    device=self.device
-                )
-                # Define optimizer for 'constraint_lambda'
-                self.constraint_lambda_optimizer = None
-                if self.w_dual_grad_desc is True:
-                    self.constraint_lambda_optimizer = th.optim.Adam(
-                        [self.constraint_lambda],
-                        lr=self.constraint_lambda_lr,
-                        eps=1e-4
-                    )
                 # Define torch dataset for demonstrations
                 expert_dataset = ExpertDataset(
                     self.config['SAC']['expert_dataset_path'],
@@ -247,13 +234,47 @@ class SAC(ABC):
                     smooth_factor=self.config['SAC']['smooth_factor']
                 )
                 # Define torch loader based on torch dataset for training the policy wrt the constraints
-                self.drop_last = len(expert_dataset) > self.batch_size
-                self.train_loader = th.utils.data.DataLoader(
+                drop_last = len(expert_dataset) > self.batch_size
+                self.expert_train_loader = th.utils.data.DataLoader(
                     dataset=expert_dataset,
                     batch_size=self.batch_size,
                     shuffle=True,
-                    drop_last=self.drop_last
+                    drop_last=drop_last
                 )
+                if self.w_discriminator is True:
+                    self.discriminator = Discriminator(
+                        self.observation_space,
+                        self.action_space,
+                        self.config['SAC']['w_actions_in_discriminator'],
+                        self.config['SAC']['discriminator_lr'],
+                        self.config['SAC']['discriminator_batch_size'],
+                        self.config['SAC']['discriminator_gradient_steps'],
+                        self.config['SAC']['discriminator_layer1_size'],
+                        self.config['SAC']['discriminator_layer2_size'],
+                        self.replay_buffer,
+                        self.expert_train_loader,
+                        self.config['SAC']['w_discriminator_icrl_regularization'],
+                        self.config['SAC']['discriminator_icrl_regularization_coef'],
+                        self.config['SAC']['w_discriminator_dac_regularization'],
+                        self.config['SAC']['discriminator_dac_regularization_coef'],
+                        device=self.device,
+                    )
+                else:
+                    # Define 'constraint_lambda'
+                    self.constraint_lambda = th.tensor(
+                        [self.initial_lambda_constraint],
+                        dtype=th.float32,
+                        requires_grad=self.w_dual_grad_desc,
+                        device=self.device
+                    )
+                    # Define optimizer for 'constraint_lambda'
+                    self.constraint_lambda_optimizer = None
+                    if self.w_dual_grad_desc is True:
+                        self.constraint_lambda_optimizer = th.optim.Adam(
+                            [self.constraint_lambda],
+                            lr=self.constraint_lambda_lr,
+                            eps=1e-4
+                        )
                 if self.w_kl_div is True:
                     self.w_entropy_in_constraint_policy_loss_term = \
                         self.config['SAC']['w_entropy_in_constraint_policy_loss_term']
@@ -321,6 +342,8 @@ class SAC(ABC):
         constraint_critic_loss_term_values = []
         critic_loss_values_wo_constraint_term = []
         lower_bound_constraint_critic_loss_term_values = []
+        rollout_discr_preds_values = []
+        expert_discr_preds_values = []
         mean_cur_dem_logprobs_value = None
         min_cur_dem_logprobs_value = None
         max_cur_dem_logprobs_value = None
@@ -339,6 +362,11 @@ class SAC(ABC):
         mean_dem_qvals_value = None
         min_dem_qvals_value = None
         max_dem_qvals_value = None
+
+        # First train the discriminator
+        discriminator_train_logs = {}
+        if self.w_discriminator is True:
+            discriminator_train_logs = self.discriminator.update()
 
         for gradient_step in range(self.gradient_steps):
 
@@ -416,8 +444,24 @@ class SAC(ABC):
             max_cur_qvals.append(min_current_q_values.max().item())
 
             ## Compute critic loss
+            critic_loss_weights = 1.
+            if self.w_discriminator is True:
+                # Get predictions of Discriminator for the rollout state-action pairs
+                rollout_discr_preds = self.discriminator.predict(replay_data.observations, replay_data.actions)
+                critic_loss_weights = rollout_discr_preds
+                # Also for the demonstrated state-action pairs, just for logs
+                expert_discr_preds = self.discriminator.predict(
+                    expert_observations, self.scale_and_clamp_demo_actions(expert_actions)
+                )
+                # Keep logs
+                rollout_discr_preds_values.append(rollout_discr_preds.mean().item())
+                expert_discr_preds_values.append(expert_discr_preds.mean().item())
             # SAC critic loss
-            critic_loss = 0.5 * sum(F.mse_loss(current_q, target_q_values) for current_q in current_q_values)
+            critic_loss = 0.5 * sum(
+                th.mean(
+                    th.pow(current_q - target_q_values, 2) * critic_loss_weights
+                ) for current_q in current_q_values
+            )
             assert isinstance(critic_loss, th.Tensor)  # for type checker
             # Constraint critic loss
             if self.w_q_values is True:
@@ -445,16 +489,20 @@ class SAC(ABC):
                  ) = self.calc_constraint_q_loss_term(
                     [expert_actions, expert_observations],
                     [replay_data.actions, replay_data.observations],
-                    current_q_values
+                    current_q_values,
+                    critic_loss_weights
                 )
                 # Keep it for logs
                 critic_loss_values_wo_constraint_term.append(critic_loss.item())
                 constraint_critic_loss_term_values.append(constraint_critic_loss.item())
                 lower_bound_constraint_critic_loss_term_values.append(lower_bound_constraint_critic_loss.item())
-                # Add the constraint term to the critic loss
-                critic_loss += self.constraint_lambda.item() * constraint_critic_loss
+                # Add the constraint term to critic loss
+                critic_loss_weight = 1.0
+                if self.w_discriminator is False:
+                    critic_loss_weight = self.constraint_lambda.item()
+                critic_loss += critic_loss_weight * constraint_critic_loss
                 if self.w_lower_bound is True:
-                    critic_loss += self.constraint_lambda.item() * lower_bound_constraint_critic_loss
+                    critic_loss += critic_loss_weight * lower_bound_constraint_critic_loss
             # Keep for logs the total critic loss
             critic_losses.append(critic_loss.item())  # type: ignore[union-attr]
 
@@ -547,7 +595,13 @@ class SAC(ABC):
             self.actor.optimizer.step()
 
             ## Computation of 'constraint_lambda' loss and optimizer step
-            if self.w_constraint_optimization is True:
+            if (
+                    self.w_constraint_optimization is True and
+                    (
+                            self.w_kl_div is True or
+                            (self.w_q_values is True and self.w_discriminator is False)
+                    )
+            ):
                 # Calculate lambda loss
                 if self.w_kl_div is True:
                     constraint_lambda_loss = self.calc_constraint_lambda_loss_w_kl_div(
@@ -607,9 +661,9 @@ class SAC(ABC):
         critic_loss_values_wo_constraint_term_mean = np.nan
         constraint_critic_loss_term_values_mean = np.nan
         lower_bound_constraint_critic_loss_term_values_mean = np.nan
+        rollout_discr_preds_values_mean = np.nan
+        expert_discr_preds_values_mean = np.nan
         if self.w_constraint_optimization is True:
-            constraint_lambda_loss_values_mean = mean(constraint_lambda_loss_values)
-            constraint_lambdas_mean = mean(constraint_lambdas)
             mean_dem_qvals_mean = mean(mean_dem_qvals)
             min_dem_qvals_mean = mean(min_dem_qvals)
             max_dem_qvals_mean = mean(max_dem_qvals)
@@ -628,6 +682,9 @@ class SAC(ABC):
             mean_cur_dem_probs_mean = mean(mean_cur_dem_probs)
             min_cur_dem_probs_mean = mean(min_cur_dem_probs)
             max_cur_dem_probs_mean = mean(max_cur_dem_probs)
+            if self.w_discriminator is False:
+                constraint_lambda_loss_values_mean = mean(constraint_lambda_loss_values)
+                constraint_lambdas_mean = mean(constraint_lambdas)
             if self.w_kl_div is True:
                 constraint_policy_loss_term_values_mean = mean(constraint_policy_loss_term_values)
                 constraint_policy_loss_nll_term_values_mean = mean(constraint_policy_loss_nll_term_values)
@@ -639,10 +696,13 @@ class SAC(ABC):
                 lower_bound_constraint_critic_loss_term_values_mean = mean(
                     lower_bound_constraint_critic_loss_term_values
                 )
+                if self.w_discriminator is True:
+                    rollout_discr_preds_values_mean = mean(rollout_discr_preds_values)
+                    expert_discr_preds_values_mean = mean(expert_discr_preds_values)
         if self.clip_grad_norm is True:
             grad_norms_clipped_mean = mean(grad_norms_clipped)
 
-        return {
+        logs_dict = {
             'actor_loss': mean(actor_losses),
             'critic_loss': mean(critic_losses),
             'entr_coef_loss': np.nan if self.ent_coef_optimizer is None else mean(ent_coef_losses),
@@ -692,8 +752,13 @@ class SAC(ABC):
             'max_cur_dem_probs': max_cur_dem_probs_mean,
             'critic_loss_values_wo_constraint_term': critic_loss_values_wo_constraint_term_mean,
             'constraint_critic_loss_term_values': constraint_critic_loss_term_values_mean,
-            'lower_bound_constraint_critic_loss_term_values': lower_bound_constraint_critic_loss_term_values_mean
+            'lower_bound_constraint_critic_loss_term_values': lower_bound_constraint_critic_loss_term_values_mean,
+            'rollout_discr_preds': rollout_discr_preds_values_mean,
+            'expert_discr_preds': expert_discr_preds_values_mean,
         }
+        logs_dict.update(discriminator_train_logs)
+
+        return logs_dict
 
     def calc_constraint_lambda_loss_w_kl_div(self, demonstrations):
 
@@ -820,6 +885,7 @@ class SAC(ABC):
             demonstrations: List[th.Tensor],
             rollout_data: List[th.Tensor],
             rollout_q_values: Tuple[th.Tensor],
+            discriminator_rollout_preds: Optional[th.Tensor] = None
     ) -> (
             th.Tensor,
             th.Tensor,
@@ -852,6 +918,8 @@ class SAC(ABC):
         :param rollout_data: List similar to 'demonstrations'.
         :param rollout_q_values: Tuple with the Q-values of the rollout state-action pairs.
             Note that the tuple consists of two tensors, one for the estimated Q-values of each critic.
+        :param discriminator_rollout_preds: Predictions of the Discriminator for the rollout state-action pairs.
+            Applicable only when self.w_discriminator is True.
 
         :return: Critic Q loss wrt constraints.
         """
@@ -879,7 +947,7 @@ class SAC(ABC):
                 th.pow(
                     (th.maximum(rollout_q, min_dem_q_value) if self.w_max_min is True else rollout_q) - min_dem_q_value,
                     2
-                )
+                ) * (1. if self.w_discriminator is False else (1. - discriminator_rollout_preds))
             ) for rollout_q in rollout_q_values
         )
 
@@ -982,7 +1050,7 @@ class SAC(ABC):
             )
 
     def get_samples_from_demonstrations(self):
-        expert_actions, expert_observations = next(iter(self.train_loader))
+        expert_actions, expert_observations = next(iter(self.expert_train_loader))
 
         return expert_actions, expert_observations
 
@@ -1007,7 +1075,7 @@ class SAC(ABC):
             epoch_log_probs = []
             epoch_probs = []
 
-            for expert_actions, expert_observations in self.train_loader:
+            for expert_actions, expert_observations in self.expert_train_loader:
 
                 # We need to sample because `log_std` may have changed between two gradient steps
                 if self.use_sde:

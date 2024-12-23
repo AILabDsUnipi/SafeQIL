@@ -64,6 +64,25 @@ def main(argv):
     assert not (config['SAC']['w_max_min'] is True and config['SAC']['w_q_values'] is False)
     # Check the consistency between 'w_lower_bound' and 'w_q_values'
     assert not (config['SAC']['w_lower_bound'] is True and config['SAC']['w_q_values'] is False)
+    # Check the consistency between 'w_use_target_critic' and 'w_q_values'
+    assert not (config['SAC']['w_use_target_critic'] is True and config['SAC']['w_q_values'] is False)
+    # Check the consistency between 'w_discriminator' and 'w_q_values'
+    assert not (config['SAC']['w_discriminator'] is True and config['SAC']['w_q_values'] is False)
+    # Check the consistency between 'w_discriminator' and 'w_dual_grad_desc'
+    assert not (config['SAC']['w_discriminator'] is True and config['SAC']['w_dual_grad_desc'] is True)
+    # Check the consistency between 'w_discriminator_icrl_regularization' and 'w_discriminator'
+    assert not (
+            config['SAC']['w_discriminator_icrl_regularization'] is True and config['SAC']['w_discriminator'] is False
+    )
+    # Check the consistency between 'w_discriminator_dac_regularization' and 'w_discriminator'
+    assert not (
+            config['SAC']['w_discriminator_dac_regularization'] is True and config['SAC']['w_discriminator'] is False
+    )
+    # Check the consistency between 'w_discriminator_dac_regularization' and 'w_discriminator_icrl_regularization'
+    assert not (
+            config['SAC']['w_discriminator_dac_regularization'] is True and
+            config['SAC']['w_discriminator_icrl_regularization'] is True
+    )
 
     # Create the environment
     env = safety_gymnasium.make(

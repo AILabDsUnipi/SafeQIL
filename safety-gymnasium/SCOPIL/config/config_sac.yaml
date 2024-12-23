@@ -4,8 +4,8 @@ game:
   use_image_obs: False
 
 SAC:
-  layer1_size: 32  # number of variables in the first hidden layer
-  layer2_size: 32 # number of variables in the second hidden layer
+  layer1_size: 32  # number of neurons in the first hidden layer
+  layer2_size: 32 # number of neurons in the second hidden layer
   log_std_init: -3.0
   batch_size: 256
   gamma: 0.99
@@ -48,8 +48,19 @@ SAC:
   # For Q-values approach
   w_q_values: True
   w_max_min: True
-  w_lower_bound: True
+  w_lower_bound: False
   w_use_target_critic: True
+  w_discriminator: True
+  w_actions_in_discriminator: False
+  discriminator_lr: 0.0003
+  discriminator_batch_size: 256
+  discriminator_gradient_steps: 1
+  discriminator_layer1_size: 32  # number of neurons in the first hidden layer
+  discriminator_layer2_size: 32 # number of neurons in the second hidden layer
+  w_discriminator_icrl_regularization: False
+  discriminator_icrl_regularization_coef: 0.5
+  w_discriminator_dac_regularization: True
+  discriminator_dac_regularization_coef: 10.0
 
   # Demonstrations
   expert_dataset_path: '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/demonstrations'

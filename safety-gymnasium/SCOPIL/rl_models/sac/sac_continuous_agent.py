@@ -22,7 +22,7 @@ from .utils import (
     get_parameters_by_name,
     polyak_update
 )
-from SCOPIL.utils.demonstration_utils import ExpertDataset
+from SCOPIL.utils.demonstration_utils import ExpertDataset, min_max_discounted_rew_values
 
 SelfSAC = TypeVar("SelfSAC", bound="SAC")
 
@@ -111,6 +111,7 @@ class SAC(ABC):
             self.w_max_min: bool = self.config['SAC']['w_max_min']
             self.w_lower_bound: bool = self.config['SAC']['w_lower_bound']
             self.w_use_target_critic: bool = self.config['SAC']['w_use_target_critic']
+            self.w_compute_analytically_min_dem_q_value: bool = self.config['SAC']['w_compute_analytically_min_dem_q_value']
             self.w_discriminator: bool = self.config['SAC']['w_discriminator']
             # Buffer placeholder
             self.replay_buffer: Optional[ReplayBuffer] = None
@@ -281,6 +282,23 @@ class SAC(ABC):
                     # Define the MSE loss function
                     if self.pretrain is True or self.w_mse is True:
                         self.mse_loss_func = th.nn.MSELoss()
+                if self.w_q_values is True:
+                    if self.w_compute_analytically_min_dem_q_value is True:
+                        self.max_disc_reward, self.min_disc_reward = min_max_discounted_rew_values(
+                            self.config['game']['env_id'],
+                            self.config['SAC']['expert_dataset_path'],
+                            self.gamma
+                        )
+                        self.max_disc_reward = th.tensor(
+                            [self.max_disc_reward],
+                            dtype=th.float32,
+                            device=self.device
+                        )
+                        self.min_disc_reward = th.tensor(
+                            [self.min_disc_reward],
+                            dtype=th.float32,
+                            device=self.device
+                        )
 
     def _create_aliases(self) -> None:
         self.actor = self.policy.actor
@@ -941,6 +959,8 @@ class SAC(ABC):
         min_dem_q_value = th.min(dem_q_values_catted).detach()
         if self.w_use_target_critic is True:
             min_dem_q_value = th.min(th.cat(self.critic_target(observations, scaled_expert_actions), dim=1)).detach()
+        elif self.w_compute_analytically_min_dem_q_value is True:
+            min_dem_q_value = self.min_disc_reward
         # Constraint critic loss
         constraint_critic_loss = 0.5 * sum(
             th.mean(
@@ -1262,11 +1282,16 @@ class SAC(ABC):
             print('Saving {} to {} ...'.format('ent_coef', ent_coef_path))
             th.save(self.ent_coef_tensor, ent_coef_path)
 
-        # Save 'constraint_lambda' variable
+        # Save 'constraint_lambda' variable / 'discriminator'
         if self.w_constraint_optimization is True:
-            constraint_lambda_path = os.path.join(path, f'{prefix}_sac_constraint_lambda.pt')
-            print('Saving {} to {} ...'.format('constraint lambda', constraint_lambda_path))
-            th.save(self.constraint_lambda, constraint_lambda_path)
+            if self.w_discriminator is True:
+                discriminator_path = os.path.join(path, f'{prefix}_sac_constraint_discriminator.pt')
+                print('Saving {} to {} ...'.format('constraint discriminator', discriminator_path))
+                self.discriminator.save(discriminator_path)
+            else:
+                constraint_lambda_path = os.path.join(path, f'{prefix}_sac_constraint_lambda.pt')
+                print('Saving {} to {} ...'.format('constraint lambda', constraint_lambda_path))
+                th.save(self.constraint_lambda, constraint_lambda_path)
 
     def load(
             self,
@@ -1304,9 +1329,14 @@ class SAC(ABC):
 
             # Load 'constraint_lambda' variable
             if self.w_constraint_optimization is True:
-                constraint_lambda_path = os.path.join(path, f'{prefix}_sac_constraint_lambda.pt')
-                print('Loading {} from {} ...'.format('constraint lambda', constraint_lambda_path))
-                self.constraint_lambda = th.load(constraint_lambda_path, device=self.device)
+                if self.w_discriminator is True:
+                    discriminator_path = os.path.join(path, f'{prefix}_sac_constraint_discriminator.pt')
+                    print('Loading {} from {} ...'.format('constraint discriminator', discriminator_path))
+                    self.discriminator.load_model(discriminator_path)
+                else:
+                    constraint_lambda_path = os.path.join(path, f'{prefix}_sac_constraint_lambda.pt')
+                    print('Loading {} from {} ...'.format('constraint lambda', constraint_lambda_path))
+                    self.constraint_lambda = th.load(constraint_lambda_path, device=self.device)
 
     def set_random_seed(self, seed: Optional[int] = None) -> None:
         """

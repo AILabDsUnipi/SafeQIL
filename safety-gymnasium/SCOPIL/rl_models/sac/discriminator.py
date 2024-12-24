@@ -206,3 +206,24 @@ class Discriminator(nn.Module):
 
         # Return gradient penalty
         return gradients_norm
+
+    def save(self, path: str) -> None:
+        """
+        Save model to a given location.
+
+        :param path:
+        """
+        th.save({"state_dict": self.state_dict()}, path)
+
+    def load_model(self, path: str) -> None:
+        """
+        Load model from the path.
+
+        :param path:
+        :return:
+        """
+
+        saved_variables = th.load(path, map_location=self.device, weights_only=False)
+
+        # Load the NN weights
+        self.load_state_dict(saved_variables["state_dict"])

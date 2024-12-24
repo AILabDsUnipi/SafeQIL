@@ -83,6 +83,15 @@ def main(argv):
             config['SAC']['w_discriminator_dac_regularization'] is True and
             config['SAC']['w_discriminator_icrl_regularization'] is True
     )
+    # Check the consistency between 'w_compute_analytically_min_dem_q_value' and 'w_q_values'
+    assert not (
+            config['SAC']['w_compute_analytically_min_dem_q_value'] is True and config['SAC']['w_q_values'] is False
+    )
+    # Check the consistency between 'w_compute_analytically_min_dem_q_value' and 'w_use_target_critic'
+    assert not (
+            config['SAC']['w_compute_analytically_min_dem_q_value'] is True and
+            config['SAC']['w_use_target_critic'] is True
+    )
 
     # Create the environment
     env = safety_gymnasium.make(

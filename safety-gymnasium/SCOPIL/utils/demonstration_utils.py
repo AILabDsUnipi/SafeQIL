@@ -54,45 +54,76 @@ def min_max_rew_values(env_id: str):
     return max_reward, min_reward
 
 
-def find_min_max_observation_reward(demonstrations_path: str) -> None:
-    """
-    Find the minimum and maximum observation values (separately for each element of the vector)
-    and the minimum and maximum reward in the demonstrations.
-    Args:
-        demonstrations_path: Path to directory containing demonstrations in pickle files.
-    """
+def min_max_discounted_rew_values(env_id: str, demonstrations_path, gamma):
 
-    min_obs = None
-    max_obs = None
-    min_reward = float('inf')
-    max_reward = float('-inf')
+    # Normalize the path to the correct format for the OS
+    norm_demonstrations_path = os.path.normpath(demonstrations_path)
+    # Split the path into parts
+    norm_demonstrations_path_parts = norm_demonstrations_path.split(os.sep)
+    # Get the second last part
+    demonstration_id = norm_demonstrations_path_parts[-2]
+
+    max_disc_reward = None
+    min_disc_reward = None
+    if (
+            env_id == 'SafetyPointGoal1-v0' and
+            demonstration_id == 'human_alone_exp_human_data_simple_w_action_smooth=0.5_1' and
+            gamma == 0.99
+    ):
+        max_disc_reward = 2.9406837539017032
+        min_disc_reward = -0.5044503041748538
+    else:
+        raise ValueError(
+            f"Not supported combination!"
+            f"\nEnvironment: {env_id}, gamma: {gamma}."
+        )
+
+    return max_disc_reward, min_disc_reward
+
+
+def calculate_discounted_rewards_per_step(rewards, gamma=0.99):
+    """
+    Calculate the discounted rewards for each step within an episode.
+    Args:
+        rewards: List of rewards for one episode.
+        gamma: Discount factor.
+    Returns:
+        np.array of discounted rewards for each step.
+    """
+    n = len(rewards)
+    discounted_rewards = np.zeros(n)
+    cumulative_reward = 0
+    # Compute discounted rewards in reverse
+    for i in reversed(range(n)):
+        cumulative_reward = rewards[i] + gamma * cumulative_reward
+        discounted_rewards[i] = cumulative_reward
+    return discounted_rewards
+
+
+def find_step_wise_discounted_rewards_and_extremes(demonstrations_path, gamma=0.99):
+    """
+    Find the discounted rewards for each step of each episode and determine the maximum and minimum discounted rewards.
+    """
+    max_discounted_reward = float('-inf')
+    min_discounted_reward = float('inf')
+    all_discounted_rewards = {}
 
     for file_name in os.listdir(demonstrations_path):
         if file_name.endswith('.pkl'):
             with open(os.path.join(demonstrations_path, file_name), 'rb') as f:
                 data = pickle.load(f)
                 for episode_key in data['reward']:
-                    rewards = data['reward'][episode_key]
-                    observations = data['vector_obs'][episode_key]
+                    rewards = list(data['reward'][episode_key].values())
+                    discounted_rewards = calculate_discounted_rewards_per_step(rewards, gamma)
+                    all_discounted_rewards[episode_key] = discounted_rewards
 
-                    for step_key in rewards:
-                        reward = rewards[step_key]
-                        obs = observations[step_key]
+                    # Update max and min of discounted rewards
+                    max_discounted_reward = max(max_discounted_reward, np.max(discounted_rewards))
+                    min_discounted_reward = min(min_discounted_reward, np.min(discounted_rewards))
 
-                        if min_obs is None:
-                            min_obs = np.array(obs)
-                            max_obs = np.array(obs)
-                        else:
-                            min_obs = np.minimum(min_obs, obs)
-                            max_obs = np.maximum(max_obs, obs)
-
-                        min_reward = min(min_reward, reward)
-                        max_reward = max(max_reward, reward)
-
-    print("Maximum observation values: ", max_obs)
-    print("Minimum observation values: ", min_obs)
-    print("Maximum reward: ", max_reward)
-    print("Minimum reward: ", min_reward)
+    print("Maximum Discounted Reward: ", max_discounted_reward)
+    print("Minimum Discounted Reward: ", min_discounted_reward)
+    return all_discounted_rewards, max_discounted_reward, min_discounted_reward
 
 
 class ExpertDataset(Dataset):
@@ -121,7 +152,7 @@ class ExpertDataset(Dataset):
         self.data_store = {}
 
         # Build an index that maps a flat list index to (filename, episode, step_key)
-        print("Loading demonstrations ...")
+        print("\nLoading demonstrations ...")
         for filename in os.listdir(directory):
             if filename.endswith('.pkl'):
                 filepath = os.path.join(directory, filename)
@@ -208,27 +239,30 @@ class ExpertDataset(Dataset):
 
 if __name__ == '__main__':
 
-    _demonstrations_path = '/home/georgepap/PycharmProjects/HAI-MAZE_master/experiments/safety_gymnasium/human_alone_exp_human_data_simple/tmp/human_alone_exp_human_data_simple_1/demonstrations'
+    _demonstrations_path = '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/demonstrations'
 
     # find_min_max_observation_reward(_demonstrations_path)
-    dataset = ExpertDataset(
-        _demonstrations_path,
-        use_images=False,
-        load_to_memory=True,
-        env_id="SafetyPointGoal1-v0",
-        normalize_features=True,
-        smooth_actions=False,
-        smooth_factor=0.9
-    )
-    loader = th.utils.data.DataLoader(dataset, batch_size=10, shuffle=True)
+    find_step_wise_discounted_rewards_and_extremes(_demonstrations_path)
 
-    import time
-    start_time = time.time()
-    for samples in enumerate(loader):
-        acts, obs = samples
-        print("\nactions: ", acts)
-        print("obs: ", obs)
-        end_time = time.time()
-        total_time = end_time - start_time
-        print("total time: ", total_time)
-        exit(0)
+    # # Test 'ExpertDataset' class
+    # dataset = ExpertDataset(
+    #     _demonstrations_path,
+    #     use_images=False,
+    #     load_to_memory=True,
+    #     env_id="SafetyPointGoal1-v0",
+    #     normalize_features=True,
+    #     smooth_actions=False,
+    #     smooth_factor=0.9
+    # )
+    # loader = th.utils.data.DataLoader(dataset, batch_size=10, shuffle=True)
+    #
+    # import time
+    # start_time = time.time()
+    # for samples in enumerate(loader):
+    #     acts, obs = samples
+    #     print("\nactions: ", acts)
+    #     print("obs: ", obs)
+    #     end_time = time.time()
+    #     total_time = end_time - start_time
+    #     print("total time: ", total_time)
+    #     exit(0)

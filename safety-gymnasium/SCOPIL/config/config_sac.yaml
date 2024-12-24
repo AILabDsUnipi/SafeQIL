@@ -49,7 +49,8 @@ SAC:
   w_q_values: True
   w_max_min: True
   w_lower_bound: False
-  w_use_target_critic: True
+  w_use_target_critic: False
+  w_compute_analytically_min_dem_q_value: True
   w_discriminator: True
   w_actions_in_discriminator: False
   discriminator_lr: 0.0003

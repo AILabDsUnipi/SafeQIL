@@ -135,6 +135,7 @@ class ExpertDataset(Dataset):
             load_to_memory=False,
             env_id=None,
             normalize_features=False,
+            normalize_rewards=False,
             smooth_actions=False,
             smooth_factor=0.9
     ):
@@ -145,6 +146,7 @@ class ExpertDataset(Dataset):
         self.load_to_memory = load_to_memory
         self.env_id = env_id
         self.normalize_features = normalize_features
+        self.normalize_rewards = normalize_rewards
         self.smooth_actions = smooth_actions
         self.smooth_factor = smooth_factor
 
@@ -162,9 +164,11 @@ class ExpertDataset(Dataset):
                     if self.load_to_memory is True:
                         # Store the data in memory
                         self.data_store[filepath] = {}
+                        self.data_store[filepath]['done'] = data['done']
                         if self.use_images is True:
                             self.data_store[filepath]['vision_obs'] = data['vision_obs']
                             self.data_store[filepath]['actions'] = data['actions']
+                            self.data_store[filepath]['reward'] = data['reward']
                         else:
                             # Normalize data here for more efficiency
                             self.data_store[filepath]['vector_obs'] = self.loaded_normalize_features_func(
@@ -172,6 +176,9 @@ class ExpertDataset(Dataset):
                             )
                             self.data_store[filepath]['actions'] = self.loaded_smooth_actions_func(
                                 data['actions']
+                            )
+                            self.data_store[filepath]['reward'] = self.loaded_normalize_reward_func(
+                                data['reward']
                             )
                     for step in data['actions'][episode].keys():  # Assuming all keys are the same across the dicts
                         self.idx_to_file_and_step.append((filepath, episode, step))
@@ -206,34 +213,94 @@ class ExpertDataset(Dataset):
 
         return features
 
+    def loaded_normalize_reward_func(self, reward):
+        if self.normalize_rewards is True:
+            for ep_key, ep_value in reward.items():  # Episode loop
+                for st_key, st_value in ep_value.items():  # Step loop
+                    reward[ep_key][st_key] = self.normalize_reward_func(st_value)
+
+        return reward
+
+    def normalize_reward_func(self, reward):
+        if self.normalize_rewards is True:
+            max_rew, min_rew = min_max_rew_values(self.env_id)
+            reward = (reward - min_rew) / (max_rew - min_rew + 1e-8)
+
+        return reward
+
     def __len__(self):
         return len(self.idx_to_file_and_step)
 
     def __getitem__(self, idx):
-        filepath, episode, step_key = self.idx_to_file_and_step[idx]
 
-        if self.load_to_memory is True:
-            data = self.data_store[filepath]
-        else:
-            with open(filepath, 'rb') as f:
-                data = pickle.load(f)
+        # Get a valid sample, that is, 'done' exists. At the last step, the actions and observations are only stored,
+        # so those samples (steps) are not valid
+        data = None
+        done = None
+        episode = None
+        step_key = None
+        next_step_key = None
+        done_exists = False
+        while done_exists is False:
 
+            filepath, episode, step_key = self.idx_to_file_and_step[idx]
+            next_step_key = f"{step_key.split('_')[0]}_{int(step_key.split('_')[1])+1}"
+
+            if self.load_to_memory is True:
+                data = self.data_store[filepath]
+            else:
+                with open(filepath, 'rb') as f:
+                    data = pickle.load(f)
+
+            if step_key in list(data['done'][episode].keys()):
+                done = data['done'][episode][step_key]
+                done_exists = True
+            else:
+                if idx < len(self.idx_to_file_and_step) - 1:
+                    idx += 1
+                else:
+                    idx = 0
+
+        ## Reward
+        reward = data['reward'][episode][step_key]
+        if self.load_to_memory is False:
+            # When data are not loaded in memory should be normalized
+            reward = self.normalize_reward_func(reward)
+
+        ## Actions
         actions = data['actions'][episode][step_key]
+        next_actions = np.zeros_like(actions)
+        if not done:
+            next_actions = data['actions'][episode][next_step_key]
         if self.load_to_memory is False:
             # When data are not loaded in memory should be scaled
             actions = self.smooth_actions_func(actions)
+            if not done:
+                next_actions = self.smooth_actions_func(next_actions)
 
         if self.use_images is True:
             observations = data['vision_obs'][episode][step_key]
+            next_observations = np.zeros_like(observations)
+            if not done:
+                next_observations = data['vision_obs'][episode][next_step_key]
         else:
             observations = data['vector_obs'][episode][step_key]
+            next_observations = np.zeros_like(observations)
+            if not done:
+                next_observations = data['vector_obs'][episode][next_step_key]
             if self.load_to_memory is False:
                 # When data are not loaded in memory should be normalized
                 observations = self.normalize_features_func(observations)
+                if not done:
+                    next_observations = self.normalize_features_func(next_observations)
 
         return (
             th.from_numpy(actions).to(th.float32).to(self.device),
-            th.from_numpy(observations).to(th.float32).to(self.device)
+            th.from_numpy(observations).to(th.float32).to(self.device),
+            th.from_numpy(np.array(done)).to(th.float32).to(self.device),
+            th.from_numpy(np.array(reward, dtype=np.float32)).to(th.float32).to(self.device),
+            th.from_numpy(next_actions).to(th.float32).to(self.device),
+            th.from_numpy(next_observations).to(th.float32).to(self.device),
         )
 
 
@@ -242,27 +309,31 @@ if __name__ == '__main__':
     _demonstrations_path = '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/demonstrations'
 
     # find_min_max_observation_reward(_demonstrations_path)
-    find_step_wise_discounted_rewards_and_extremes(_demonstrations_path)
+    # find_step_wise_discounted_rewards_and_extremes(_demonstrations_path)
 
-    # # Test 'ExpertDataset' class
-    # dataset = ExpertDataset(
-    #     _demonstrations_path,
-    #     use_images=False,
-    #     load_to_memory=True,
-    #     env_id="SafetyPointGoal1-v0",
-    #     normalize_features=True,
-    #     smooth_actions=False,
-    #     smooth_factor=0.9
-    # )
-    # loader = th.utils.data.DataLoader(dataset, batch_size=10, shuffle=True)
-    #
-    # import time
-    # start_time = time.time()
-    # for samples in enumerate(loader):
-    #     acts, obs = samples
-    #     print("\nactions: ", acts)
-    #     print("obs: ", obs)
-    #     end_time = time.time()
-    #     total_time = end_time - start_time
-    #     print("total time: ", total_time)
-    #     exit(0)
+    # Test 'ExpertDataset' class
+    dataset = ExpertDataset(
+        _demonstrations_path,
+        use_images=False,
+        load_to_memory=True,
+        env_id="SafetyPointGoal1-v0",
+        normalize_features=True,
+        smooth_actions=False,
+        smooth_factor=0.9
+    )
+    loader = th.utils.data.DataLoader(dataset, batch_size=10, shuffle=True)
+
+    import time
+    start_time = time.time()
+    for iter_idx, samples in enumerate(loader):
+        acts, obs, dones, rewards, next_acts, next_obs = samples
+        print("\nactions: ", acts)
+        print("obs: ", obs)
+        print("dones: ", dones)
+        print("rewards: ", rewards)
+        print("next_acts: ", next_acts)
+        print("next_obs: ", next_obs)
+        end_time = time.time()
+        total_time = end_time - start_time
+        print("total time: ", total_time)
+        exit(0)

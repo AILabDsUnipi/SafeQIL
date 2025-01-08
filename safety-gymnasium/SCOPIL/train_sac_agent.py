@@ -92,6 +92,10 @@ def main(argv):
             config['SAC']['w_compute_analytically_min_dem_q_value'] is True and
             config['SAC']['w_use_target_critic'] is True
     )
+    # Check the consistency between 'w_demonstrations_rl_term' and 'w_q_values'
+    assert not (
+            config['SAC']['w_demonstrations_rl_term'] is True and config['SAC']['w_q_values'] is False
+    )
 
     # Create the environment
     env = safety_gymnasium.make(

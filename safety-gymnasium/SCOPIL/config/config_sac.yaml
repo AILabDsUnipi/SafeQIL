@@ -58,10 +58,11 @@ SAC:
   discriminator_gradient_steps: 1
   discriminator_layer1_size: 32  # number of neurons in the first hidden layer
   discriminator_layer2_size: 32 # number of neurons in the second hidden layer
-  w_discriminator_icrl_regularization: False
+  w_discriminator_icrl_regularization: True
   discriminator_icrl_regularization_coef: 0.5
-  w_discriminator_dac_regularization: True
+  w_discriminator_dac_regularization: False
   discriminator_dac_regularization_coef: 10.0
+  w_demonstrations_rl_term: True
 
   # Demonstrations
   expert_dataset_path: '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/demonstrations'
@@ -85,7 +86,7 @@ Experiment:
   # Games/Steps
   max_timesteps_per_game: 1000  # max timesteps per episode in train mode
   test_max_timesteps_per_game: 1000  # max steps per episode in test mode
-  test_max_games: 5 #  40 # 5  # print avg test reward in the interval
+  test_max_games: 40 # 5  # print avg test reward in the interval
 
   # Saving
   save_model: False
@@ -94,13 +95,13 @@ Experiment:
   # Testing
   test_model: False # if True, no training
   load_checkpoint: False
-  checkpoint_path: "/home/georgepap/PycharmProjects/HAI-MAZE_master/experiments/safety_gymnasium/sac_w_constr_opt_w_pretrain_w_mse_w_action_smooth=0.99_wo_dual_grad_desc_init_lambda=7.05/train_results/tmp/sac_single_agent_exp_sac_w_constr_opt_w_pretrain_w_mse_w_action_smooth=0.99_wo_dual_grad_desc_init_lambda=7.05_1/chkpts"
+  checkpoint_path: "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/sac_w_constr_opt_w_constraint_critic_loss_w_max_min_w_discr_w_dac_reg_w_compute_analytically_min_dem_q_value_results/train_results/tmp/sac_single_agent_exp_sac_w_constr_opt_w_constraint_critic_loss_w_max_min_w_discr_w_dac_reg_w_compute_analytically_min_dem_q_value_results_1/chkpts"
   checkpoint_prefix: "last"  # Options: "best_reward", "lowest_constr", "last"
 
   render: False
   debug_: False
   test_window_size_moving_avg: 10
-  seed: None # 2024  # None or int
+  seed: 2024  # None # 2024  # None or int
   device: "cuda"  # "cuda" or "cpu"
 
 

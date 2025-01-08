@@ -8,6 +8,7 @@ import io
 from statistics import mean
 
 import numpy as np
+import torch
 import torch as th
 from gymnasium import spaces
 from torch.nn import functional as F
@@ -113,6 +114,7 @@ class SAC(ABC):
             self.w_use_target_critic: bool = self.config['SAC']['w_use_target_critic']
             self.w_compute_analytically_min_dem_q_value: bool = self.config['SAC']['w_compute_analytically_min_dem_q_value']
             self.w_discriminator: bool = self.config['SAC']['w_discriminator']
+            self.w_demonstrations_rl_term: bool = self.config['SAC']['w_demonstrations_rl_term']
             # Buffer placeholder
             self.replay_buffer: Optional[ReplayBuffer] = None
         # Define policy keyword arguments
@@ -231,6 +233,7 @@ class SAC(ABC):
                     load_to_memory=self.config['SAC']['load_demos_in_memory'],
                     env_id=self.config['game']['env_id'],
                     normalize_features=self.config['Experiment']['normalize_features'],
+                    normalize_rewards=self.config['Experiment']['normalize_rewards'],
                     smooth_actions=self.config['SAC']['smooth_actions'],
                     smooth_factor=self.config['SAC']['smooth_factor']
                 )
@@ -362,6 +365,7 @@ class SAC(ABC):
         lower_bound_constraint_critic_loss_term_values = []
         rollout_discr_preds_values = []
         expert_discr_preds_values = []
+        dem_rl_term_constraint_critic_loss_values = []
         mean_cur_dem_logprobs_value = None
         min_cur_dem_logprobs_value = None
         max_cur_dem_logprobs_value = None
@@ -394,8 +398,19 @@ class SAC(ABC):
             # Samples from demonstrations
             expert_observations = None
             expert_actions = None
+            expert_done = None
+            expert_reward = None
+            expert_next_actions = None
+            expert_next_observations = None
             if self.w_constraint_optimization is True:
-                expert_actions, expert_observations = self.get_samples_from_demonstrations()
+                (
+                    expert_actions,
+                    expert_observations,
+                    expert_done,
+                    expert_reward,
+                    expert_next_actions,
+                    expert_next_observations
+                ) = self.get_samples_from_demonstrations()
 
             # We need to sample because `log_std` may have changed between two gradient steps
             if self.use_sde:
@@ -486,6 +501,7 @@ class SAC(ABC):
                 (
                     constraint_critic_loss,
                     lower_bound_constraint_critic_loss,
+                    dem_rl_term_constraint_critic_loss,
                     mean_cur_dem_logprobs_value,
                     min_cur_dem_logprobs_value,
                     max_cur_dem_logprobs_value,
@@ -505,15 +521,18 @@ class SAC(ABC):
                     min_dem_qvals_value,
                     max_dem_qvals_value
                  ) = self.calc_constraint_q_loss_term(
-                    [expert_actions, expert_observations],
+                    [expert_actions, expert_observations, expert_done, expert_reward, expert_next_actions, expert_next_observations],
                     [replay_data.actions, replay_data.observations],
                     current_q_values,
-                    critic_loss_weights
+                    critic_loss_weights,
+                    ent_coef
                 )
                 # Keep it for logs
                 critic_loss_values_wo_constraint_term.append(critic_loss.item())
                 constraint_critic_loss_term_values.append(constraint_critic_loss.item())
                 lower_bound_constraint_critic_loss_term_values.append(lower_bound_constraint_critic_loss.item())
+                if dem_rl_term_constraint_critic_loss is not None:
+                    dem_rl_term_constraint_critic_loss_values.append(dem_rl_term_constraint_critic_loss.item())
                 # Add the constraint term to critic loss
                 critic_loss_weight = 1.0
                 if self.w_discriminator is False:
@@ -521,6 +540,8 @@ class SAC(ABC):
                 critic_loss += critic_loss_weight * constraint_critic_loss
                 if self.w_lower_bound is True:
                     critic_loss += critic_loss_weight * lower_bound_constraint_critic_loss
+                if self.w_demonstrations_rl_term is True:
+                    critic_loss += dem_rl_term_constraint_critic_loss
             # Keep for logs the total critic loss
             critic_losses.append(critic_loss.item())  # type: ignore[union-attr]
 
@@ -627,9 +648,10 @@ class SAC(ABC):
                     )
                 elif self.w_q_values is True:
                     constraint_lambda_loss = self.calc_constraint_lambda_loss_w_q_values(
-                        [expert_actions, expert_observations],
+                        [expert_actions, expert_observations, expert_done, expert_reward, expert_next_actions, expert_next_observations],
                         [replay_data.actions, replay_data.observations],
-                        current_q_values
+                        current_q_values,
+                        ent_coef
                     )
                 else:
                     raise NotImplementedError('The constraint optimization is not implemented for this case.')
@@ -681,6 +703,7 @@ class SAC(ABC):
         lower_bound_constraint_critic_loss_term_values_mean = np.nan
         rollout_discr_preds_values_mean = np.nan
         expert_discr_preds_values_mean = np.nan
+        dem_rl_term_constraint_critic_loss_values_mean = np.nan
         if self.w_constraint_optimization is True:
             mean_dem_qvals_mean = mean(mean_dem_qvals)
             min_dem_qvals_mean = mean(min_dem_qvals)
@@ -717,6 +740,8 @@ class SAC(ABC):
                 if self.w_discriminator is True:
                     rollout_discr_preds_values_mean = mean(rollout_discr_preds_values)
                     expert_discr_preds_values_mean = mean(expert_discr_preds_values)
+                if self.w_demonstrations_rl_term is True:
+                    dem_rl_term_constraint_critic_loss_values_mean = mean(dem_rl_term_constraint_critic_loss_values)
         if self.clip_grad_norm is True:
             grad_norms_clipped_mean = mean(grad_norms_clipped)
 
@@ -773,6 +798,7 @@ class SAC(ABC):
             'lower_bound_constraint_critic_loss_term_values': lower_bound_constraint_critic_loss_term_values_mean,
             'rollout_discr_preds': rollout_discr_preds_values_mean,
             'expert_discr_preds': expert_discr_preds_values_mean,
+            'dem_rl_term_constraint_critic_loss': dem_rl_term_constraint_critic_loss_values_mean,
         }
         logs_dict.update(discriminator_train_logs)
 
@@ -785,12 +811,13 @@ class SAC(ABC):
 
         return constraint_lambda_loss
 
-    def calc_constraint_lambda_loss_w_q_values(self, demonstrations, rollout_data, rollout_q_values):
+    def calc_constraint_lambda_loss_w_q_values(self, demonstrations, rollout_data, rollout_q_values, ent_coef):
 
         constraint_critic_loss, lower_bound_constraint_critic_loss, *_ = self.calc_constraint_q_loss_term(
             demonstrations,
             rollout_data,
-            rollout_q_values
+            rollout_q_values,
+            ent_coef
         )
 
         constraint_lambda_loss = -self.constraint_lambda.squeeze(0) * constraint_critic_loss.item()
@@ -903,6 +930,7 @@ class SAC(ABC):
             demonstrations: List[th.Tensor],
             rollout_data: List[th.Tensor],
             rollout_q_values: Tuple[th.Tensor],
+            ent_coef: th.Tensor,
             discriminator_rollout_preds: Optional[th.Tensor] = None
     ) -> (
             th.Tensor,
@@ -931,11 +959,20 @@ class SAC(ABC):
 
         :param demonstrations: List with: 1) actions of type torch.Tensor with dtype=torch.float32
                                              and shape=[batch_size, *action_space.shape],
-                                      and 2) observations of type torch.Tensor with dtype=torch.float32 and
-                                             shape=[batch_size, *observation_space.shape].
+                                          2) observations of type torch.Tensor with dtype=torch.float32
+                                             and shape=[batch_size, *observation_space.shape],
+                                          3) done of type torch.Tensor with dtype=torch.float32
+                                             and shape=[batch_size, ],
+                                          4) reward of type torch.Tensor with dtype=torch.float32
+                                             and shape=[batch_size, ],
+                                          5) next_actions of type torch.Tensor with dtype=torch.float32
+                                             and shape=[batch_size, *action_space.shape],
+                                          6) next_observations of type torch.Tensor with dtype=torch.float32
+                                             and shape=[batch_size, *observation_space.shape],
         :param rollout_data: List similar to 'demonstrations'.
         :param rollout_q_values: Tuple with the Q-values of the rollout state-action pairs.
             Note that the tuple consists of two tensors, one for the estimated Q-values of each critic.
+        :param ent_coef: Entropy coefficient.
         :param discriminator_rollout_preds: Predictions of the Discriminator for the rollout state-action pairs.
             Applicable only when self.w_discriminator is True.
 
@@ -945,7 +982,11 @@ class SAC(ABC):
         # Demonstrations' state-action pairs
         actions = demonstrations[0]
         observations = demonstrations[1]
-        self.check_demonstrations_format(actions, observations)
+        dones = demonstrations[2]
+        rewards = demonstrations[3]
+        next_actions = demonstrations[4]
+        next_observations = demonstrations[5]
+        self.check_demonstrations_format(actions, observations, dones, rewards, next_actions, next_observations)
 
         # Rollouts' state-action pairs
         rollout_actions = rollout_data[0]
@@ -971,7 +1012,7 @@ class SAC(ABC):
             ) for rollout_q in rollout_q_values
         )
 
-        ## Compute the lower bound constraint loss
+        ## Compute the lower bound constraint critic loss
         # Get the maximum Q-value of the rollout state-action pairs to use it as the target (without grads)
         max_rollout_q_value = th.max(th.cat(rollout_q_values, dim=1)).detach()
         if self.w_use_target_critic is True:
@@ -987,6 +1028,30 @@ class SAC(ABC):
                 )
             ) for dem_q in dem_q_values
         )
+
+        ### Compute RL term for demonstrations of constraint critic loss
+        dem_rl_term_constraint_critic_loss = None
+        if self.w_demonstrations_rl_term is True:
+            ## Compute the targets
+            with th.no_grad():
+                # Select action according to policy
+                pi_next_actions, pi_next_log_prob = self.actor.action_log_prob(next_observations)
+                # Compute the next Q values: min over all critics' targets
+                next_q_values = th.cat(self.critic_target(next_observations, pi_next_actions), dim=1)
+                next_q_values, _ = th.min(next_q_values, dim=1, keepdim=True)
+                # add entropy term
+                next_q_values = next_q_values - ent_coef * pi_next_log_prob.reshape(-1, 1)
+                # td error + entropy term
+                # Add extra dimension to 'rewards' and 'dones' to match 'next_q_values' dimensionality
+                target_q_values = rewards[:, None] + (1 - dones[:, None]) * self.gamma * next_q_values
+            ## Get current Q-values estimates for each critic network using actions from demonstrations
+            current_q_values = self.critic(observations, scaled_expert_actions)
+            ## Compute the loss
+            dem_rl_term_constraint_critic_loss = 0.5 * sum(
+                th.mean(
+                    th.pow(current_q - target_q_values, 2)
+                ) for current_q in current_q_values
+            )
 
         ## Keep for logs
         # Log probabilities of the given actions
@@ -1026,6 +1091,7 @@ class SAC(ABC):
         return (
             constraint_critic_loss,
             lower_bound_constraint_critic_loss,
+            dem_rl_term_constraint_critic_loss,
             mean_cur_dem_logprobs_value,
             min_cur_dem_logprobs_value,
             max_cur_dem_logprobs_value,
@@ -1046,7 +1112,15 @@ class SAC(ABC):
             max_dem_qvals_value
         )
 
-    def check_demonstrations_format(self, actions, observations):
+    def check_demonstrations_format(
+            self,
+            actions,
+            observations,
+            done=None,
+            reward=None,
+            next_actions=None,
+            next_observations=None
+    ):
         """
         Check if the provided demonstration samples have the right format.
 
@@ -1054,25 +1128,68 @@ class SAC(ABC):
             and shape=[batch_size, *action_space.shape].
         :param observations: observations of type torch.Tensor with dtype=torch.float32 and
             shape=[batch_size, *observation_space.shape].
+        :param done: None or done of type torch.Tensor with dtype=torch.float32
+            and shape=[batch_size, ].
+        :param reward: None or done of type torch.Tensor with dtype=torch.float32
+            and shape=[batch_size, ].
+        :param next_actions: None or next actions of type torch.Tensor with dtype=torch.float32
+            and shape=[batch_size, *action_space.shape].
+        :param next_observations: None or next observations of type torch.Tensor with dtype=torch.float32 and
+            shape=[batch_size, *observation_space.shape].
 
         :return:
         """
 
-        assert actions.shape[1:] == self.action_space.shape, \
+        assert actions.shape[1:] == self.action_space.shape and actions.dtype == torch.float32, \
             (
                     "actions.shape: " + str(actions.shape) +
-                    " self.action_space.shape: " + str(self.action_space.shape)
+                    "\nself.action_space.shape: " + str(self.action_space.shape) +
+                    "\nactions.dtype: " + str(actions.dtype)
             )
-        assert observations.shape[1:] == self.observation_space.shape, \
+        assert observations.shape[1:] == self.observation_space.shape and observations.dtype == torch.float32, \
             (
                     "observations.shape: " + str(observations.shape) +
-                    " self.observation_space.shape: " + str(self.observation_space.shape)
+                    "\nself.observation_space.shape: " + str(self.observation_space.shape) +
+                    "\nobservations.dtype: " + str(observations.dtype)
             )
+        if done is not None:
+            assert len(done.shape) == 1 and done.dtype == torch.float32, \
+                (
+                        "done.shape: " + str(done.shape) +
+                        "\ndone.dtype: " + str(done.dtype)
+                )
+        if reward is not None:
+            assert len(reward.shape) == 1 and reward.dtype == torch.float32, \
+                (
+                        "reward.shape: " + str(reward.shape) +
+                        "\nreward.dtype: " + str(reward.dtype)
+                )
+        if next_actions is not None:
+            assert next_actions.shape[1:] == self.action_space.shape and next_actions.dtype == torch.float32, \
+                (
+                        "next_actions.shape: " + str(next_actions.shape) +
+                        "\nself.action_space.shape: " + str(self.action_space.shape) +
+                        "\nnext_actions.dtype: " + str(next_actions.dtype)
+                )
+        if next_observations is not None:
+            assert next_observations.shape[1:] == self.observation_space.shape and next_observations.dtype == torch.float32, \
+                (
+                        "next_observations.shape: " + str(next_observations.shape) +
+                        "\nself.observation_space.shape: " + str(self.observation_space.shape) +
+                        "\nnext_observations.dtype: " + str(next_observations.dtype)
+                )
 
     def get_samples_from_demonstrations(self):
-        expert_actions, expert_observations = next(iter(self.expert_train_loader))
+        (
+            expert_actions,
+            expert_observations,
+            expert_done,
+            expert_reward,
+            expert_next_actions,
+            expert_next_observations
+        ) = next(iter(self.expert_train_loader))
 
-        return expert_actions, expert_observations
+        return expert_actions, expert_observations, expert_done, expert_reward, expert_next_actions, expert_next_observations
 
     def pretrain_func(self) -> dict:
 
@@ -1095,7 +1212,7 @@ class SAC(ABC):
             epoch_log_probs = []
             epoch_probs = []
 
-            for expert_actions, expert_observations in self.expert_train_loader:
+            for expert_actions, expert_observations, _, _, _ in self.expert_train_loader:
 
                 # We need to sample because `log_std` may have changed between two gradient steps
                 if self.use_sde:

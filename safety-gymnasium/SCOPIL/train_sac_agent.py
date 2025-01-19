@@ -96,6 +96,14 @@ def main(argv):
     assert not (
             config['SAC']['w_demonstrations_rl_term'] is True and config['SAC']['w_q_values'] is False
     )
+    # Check the consistency between 'w_ood_rl_term' and 'w_q_values'
+    assert not (
+            config['SAC']['w_ood_rl_term'] is True and config['SAC']['w_q_values'] is False
+    )
+    # Check the consistency between 'w_ood_rl_term' and 'w_discriminator'
+    assert not (
+            config['SAC']['w_ood_rl_term'] is True and config['SAC']['w_discriminator'] is False
+    )
 
     # Create the environment
     env = safety_gymnasium.make(

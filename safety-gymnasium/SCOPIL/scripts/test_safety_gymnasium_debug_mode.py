@@ -2,7 +2,7 @@ import safety_gymnasium
 import mujoco
 
 import sys
-sys.path.append('./../')
+sys.path.append('./')
 
 from SCOPIL.utils.env_utils import capture_img_from_env_rendering
 

@@ -115,6 +115,7 @@ class SAC(ABC):
             self.w_compute_analytically_min_dem_q_value: bool = self.config['SAC']['w_compute_analytically_min_dem_q_value']
             self.w_discriminator: bool = self.config['SAC']['w_discriminator']
             self.w_demonstrations_rl_term: bool = self.config['SAC']['w_demonstrations_rl_term']
+            self.w_ood_rl_term: bool = self.config['SAC']['w_ood_rl_term']
             # Buffer placeholder
             self.replay_buffer: Optional[ReplayBuffer] = None
         # Define policy keyword arguments
@@ -366,6 +367,7 @@ class SAC(ABC):
         rollout_discr_preds_values = []
         expert_discr_preds_values = []
         dem_rl_term_constraint_critic_loss_values = []
+        td_term_constraint_critic_loss_values = []
         mean_cur_dem_logprobs_value = None
         min_cur_dem_logprobs_value = None
         max_cur_dem_logprobs_value = None
@@ -457,7 +459,8 @@ class SAC(ABC):
                 # add entropy term
                 next_q_values = next_q_values - ent_coef * next_log_prob.reshape(-1, 1)
                 # td error + entropy term
-                target_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * next_q_values
+                target_q_values_wo_reward = (1 - replay_data.dones) * self.gamma * next_q_values
+                target_q_values = replay_data.rewards + target_q_values_wo_reward
                 # Keep next and target Q-values for logs
                 mean_next_qvals.append(th.mean(next_q_values).item())
                 min_next_qvals.append(next_q_values.min().item())
@@ -502,6 +505,7 @@ class SAC(ABC):
                     constraint_critic_loss,
                     lower_bound_constraint_critic_loss,
                     dem_rl_term_constraint_critic_loss,
+                    td_term_constraint_critic_loss,
                     mean_cur_dem_logprobs_value,
                     min_cur_dem_logprobs_value,
                     max_cur_dem_logprobs_value,
@@ -524,13 +528,15 @@ class SAC(ABC):
                     [expert_actions, expert_observations, expert_done, expert_reward, expert_next_actions, expert_next_observations],
                     [replay_data.actions, replay_data.observations],
                     current_q_values,
+                    target_q_values_wo_reward,
+                    ent_coef,
                     critic_loss_weights,
-                    ent_coef
                 )
                 # Keep it for logs
                 critic_loss_values_wo_constraint_term.append(critic_loss.item())
                 constraint_critic_loss_term_values.append(constraint_critic_loss.item())
                 lower_bound_constraint_critic_loss_term_values.append(lower_bound_constraint_critic_loss.item())
+                td_term_constraint_critic_loss_values.append(td_term_constraint_critic_loss.item())
                 if dem_rl_term_constraint_critic_loss is not None:
                     dem_rl_term_constraint_critic_loss_values.append(dem_rl_term_constraint_critic_loss.item())
                 # Add the constraint term to critic loss
@@ -542,6 +548,8 @@ class SAC(ABC):
                     critic_loss += critic_loss_weight * lower_bound_constraint_critic_loss
                 if self.w_demonstrations_rl_term is True:
                     critic_loss += dem_rl_term_constraint_critic_loss
+                if self.w_ood_rl_term is True:
+                    critic_loss += td_term_constraint_critic_loss
             # Keep for logs the total critic loss
             critic_losses.append(critic_loss.item())  # type: ignore[union-attr]
 
@@ -651,6 +659,7 @@ class SAC(ABC):
                         [expert_actions, expert_observations, expert_done, expert_reward, expert_next_actions, expert_next_observations],
                         [replay_data.actions, replay_data.observations],
                         current_q_values,
+                        target_q_values_wo_reward,
                         ent_coef
                     )
                 else:
@@ -704,6 +713,7 @@ class SAC(ABC):
         rollout_discr_preds_values_mean = np.nan
         expert_discr_preds_values_mean = np.nan
         dem_rl_term_constraint_critic_loss_values_mean = np.nan
+        td_term_constraint_critic_loss_values_mean = np.nan
         if self.w_constraint_optimization is True:
             mean_dem_qvals_mean = mean(mean_dem_qvals)
             min_dem_qvals_mean = mean(min_dem_qvals)
@@ -737,6 +747,7 @@ class SAC(ABC):
                 lower_bound_constraint_critic_loss_term_values_mean = mean(
                     lower_bound_constraint_critic_loss_term_values
                 )
+                td_term_constraint_critic_loss_values_mean = mean(td_term_constraint_critic_loss_values)
                 if self.w_discriminator is True:
                     rollout_discr_preds_values_mean = mean(rollout_discr_preds_values)
                     expert_discr_preds_values_mean = mean(expert_discr_preds_values)
@@ -799,6 +810,7 @@ class SAC(ABC):
             'rollout_discr_preds': rollout_discr_preds_values_mean,
             'expert_discr_preds': expert_discr_preds_values_mean,
             'dem_rl_term_constraint_critic_loss': dem_rl_term_constraint_critic_loss_values_mean,
+            'td_term_constraint_critic_loss': td_term_constraint_critic_loss_values_mean
         }
         logs_dict.update(discriminator_train_logs)
 
@@ -811,12 +823,20 @@ class SAC(ABC):
 
         return constraint_lambda_loss
 
-    def calc_constraint_lambda_loss_w_q_values(self, demonstrations, rollout_data, rollout_q_values, ent_coef):
+    def calc_constraint_lambda_loss_w_q_values(
+            self,
+            demonstrations,
+            rollout_data,
+            rollout_q_values,
+            target_q_values_wo_reward,
+            ent_coef
+    ):
 
         constraint_critic_loss, lower_bound_constraint_critic_loss, *_ = self.calc_constraint_q_loss_term(
             demonstrations,
             rollout_data,
             rollout_q_values,
+            target_q_values_wo_reward,
             ent_coef
         )
 
@@ -930,6 +950,7 @@ class SAC(ABC):
             demonstrations: List[th.Tensor],
             rollout_data: List[th.Tensor],
             rollout_q_values: Tuple[th.Tensor],
+            target_rollout_q_values_wo_reward: th.Tensor,
             ent_coef: th.Tensor,
             discriminator_rollout_preds: Optional[th.Tensor] = None
     ) -> (
@@ -972,6 +993,9 @@ class SAC(ABC):
         :param rollout_data: List similar to 'demonstrations'.
         :param rollout_q_values: Tuple with the Q-values of the rollout state-action pairs.
             Note that the tuple consists of two tensors, one for the estimated Q-values of each critic.
+        :param target_rollout_q_values_wo_reward: Torch.Tensor with the targets without rewards for the TD loss, that is,
+            the next Q-values of the rollout next_state-next_action pairs and the entropy term.
+            Note that the tensor has a single batch dimension, that is, the min estimated Q-values of the critics is used.
         :param ent_coef: Entropy coefficient.
         :param discriminator_rollout_preds: Predictions of the Discriminator for the rollout state-action pairs.
             Applicable only when self.w_discriminator is True.
@@ -992,7 +1016,7 @@ class SAC(ABC):
         rollout_actions = rollout_data[0]
         rollout_observations = rollout_data[1]
 
-        ## Compute the constraint critic loss
+        ## Compute the constraint critic loss and the corresponding TD term
         # Get the minimum Q-value of the demonstrated state-action pairs to use it as the target (without grads)
         scaled_expert_actions = self.scale_and_clamp_demo_actions(actions)
         dem_q_values = self.critic(observations, scaled_expert_actions)
@@ -1007,6 +1031,15 @@ class SAC(ABC):
             th.mean(
                 th.pow(
                     (th.maximum(rollout_q, min_dem_q_value) if self.w_max_min is True else rollout_q) - min_dem_q_value,
+                    2
+                ) * (1. if self.w_discriminator is False else (1. - discriminator_rollout_preds))
+            ) for rollout_q in rollout_q_values
+        )
+        # TD term
+        td_term_constraint_critic_loss = 0.5 * sum(
+            th.mean(
+                th.pow(
+                    rollout_q - target_rollout_q_values_wo_reward,
                     2
                 ) * (1. if self.w_discriminator is False else (1. - discriminator_rollout_preds))
             ) for rollout_q in rollout_q_values
@@ -1092,6 +1125,7 @@ class SAC(ABC):
             constraint_critic_loss,
             lower_bound_constraint_critic_loss,
             dem_rl_term_constraint_critic_loss,
+            td_term_constraint_critic_loss,
             mean_cur_dem_logprobs_value,
             min_cur_dem_logprobs_value,
             max_cur_dem_logprobs_value,

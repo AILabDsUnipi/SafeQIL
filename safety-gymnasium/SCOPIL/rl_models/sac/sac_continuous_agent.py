@@ -115,7 +115,11 @@ class SAC(ABC):
             self.w_compute_analytically_min_dem_q_value: bool = self.config['SAC']['w_compute_analytically_min_dem_q_value']
             self.w_discriminator: bool = self.config['SAC']['w_discriminator']
             self.w_demonstrations_rl_term: bool = self.config['SAC']['w_demonstrations_rl_term']
+            self.w_demonstrations_next_actions_in_demonstrations_rl_term: bool = self.config['SAC']['w_demonstrations_next_actions_in_demonstrations_rl_term']
+            self.w_entropy_in_demonstrations_rl_term: bool = self.config['SAC']['w_entropy_in_demonstrations_rl_term']
             self.w_ood_rl_term: bool = self.config['SAC']['w_ood_rl_term']
+            self.w_discriminator_rewards_in_ood_rl_term: bool = self.config['SAC']['w_discriminator_rewards_in_ood_rl_term']
+            self.discriminator_reward_function_in_ood_rl_term: str = self.config['SAC']['discriminator_reward_function_in_ood_rl_term']
             # Buffer placeholder
             self.replay_buffer: Optional[ReplayBuffer] = None
         # Define policy keyword arguments
@@ -600,7 +604,7 @@ class SAC(ABC):
                     max_dem_qvals_value
                 ) = self.calc_constraint_policy_loss_term([expert_actions, expert_observations])
                 # Add constraint term loss to policy loss
-                actor_loss = actor_loss + self.constraint_lambda.item() * constraint_policy_loss_term
+                actor_loss += self.constraint_lambda.item() * constraint_policy_loss_term
                 # Keep it for logs
                 constraint_policy_loss_term_value = constraint_policy_loss_term.item()
                 constraint_policy_loss_term_values.append(constraint_policy_loss_term_value)
@@ -1036,10 +1040,24 @@ class SAC(ABC):
             ) for rollout_q in rollout_q_values
         )
         # TD term
+        target_rollout_q_values = target_rollout_q_values_wo_reward
+        if self.w_discriminator_rewards_in_ood_rl_term is True:
+            # Add the Discriminator's estimates as reward signal
+            if self.discriminator_reward_function_in_ood_rl_term == 'GAIL':
+                target_rollout_q_values += -torch.log(1-discriminator_rollout_preds)
+            elif self.discriminator_reward_function_in_ood_rl_term == 'saturing_GANs_loss':
+                target_rollout_q_values += torch.log(discriminator_rollout_preds)
+            elif self.discriminator_reward_function_in_ood_rl_term == 'AIRL':
+                target_rollout_q_values += torch.log(discriminator_rollout_preds) - torch.log(1-discriminator_rollout_preds)
+            else:
+                raise ValueError(
+                    "The selected 'discriminator_reward_function_in_ood_rl_term': "
+                    f"{self.discriminator_reward_function_in_ood_rl_term} is not supported!"
+                )
         td_term_constraint_critic_loss = 0.5 * sum(
             th.mean(
                 th.pow(
-                    rollout_q - target_rollout_q_values_wo_reward,
+                    rollout_q - target_rollout_q_values,
                     2
                 ) * (1. if self.w_discriminator is False else (1. - discriminator_rollout_preds))
             ) for rollout_q in rollout_q_values
@@ -1067,13 +1085,28 @@ class SAC(ABC):
         if self.w_demonstrations_rl_term is True:
             ## Compute the targets
             with th.no_grad():
-                # Select action according to policy
-                pi_next_actions, pi_next_log_prob = self.actor.action_log_prob(next_observations)
+                dem_rl_term_next_actions = None
+                dem_rl_term_next_log_prob = None
+                # Select actions according to demonstrations
+                if self.w_demonstrations_next_actions_in_demonstrations_rl_term is True:
+                    dem_rl_term_next_actions = self.scale_and_clamp_demo_actions(next_actions)
+                    # Log probs
+                    dem_rl_term_next_log_prob, _ = self.actor.evaluate_actions(
+                        next_observations,
+                        next_actions,
+                        scale_actions=True,
+                        adjust_entropy=False,
+                        w_std_grads=False
+                    )
+                # Select actions according to policy
+                else:
+                    dem_rl_term_next_actions, dem_rl_term_next_log_prob = self.actor.action_log_prob(next_observations)
                 # Compute the next Q values: min over all critics' targets
-                next_q_values = th.cat(self.critic_target(next_observations, pi_next_actions), dim=1)
+                next_q_values = th.cat(self.critic_target(next_observations, dem_rl_term_next_actions), dim=1)
                 next_q_values, _ = th.min(next_q_values, dim=1, keepdim=True)
                 # add entropy term
-                next_q_values = next_q_values - ent_coef * pi_next_log_prob.reshape(-1, 1)
+                if self.w_entropy_in_demonstrations_rl_term is True:
+                    next_q_values -= ent_coef * dem_rl_term_next_log_prob.reshape(-1, 1)
                 # td error + entropy term
                 # Add extra dimension to 'rewards' and 'dones' to match 'next_q_values' dimensionality
                 target_q_values = rewards[:, None] + (1 - dones[:, None]) * self.gamma * next_q_values

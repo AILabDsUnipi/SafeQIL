@@ -326,11 +326,11 @@ if __name__ == '__main__':
     import time
     start_time = time.time()
     for iter_idx, samples in enumerate(loader):
-        acts, obs, dones, rewards, next_acts, next_obs = samples
+        acts, obs, dones, rews, next_acts, next_obs = samples
         print("\nactions: ", acts)
         print("obs: ", obs)
         print("dones: ", dones)
-        print("rewards: ", rewards)
+        print("rewards: ", rews)
         print("next_acts: ", next_acts)
         print("next_obs: ", next_obs)
         end_time = time.time()

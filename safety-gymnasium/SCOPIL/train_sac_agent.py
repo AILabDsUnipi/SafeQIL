@@ -96,6 +96,18 @@ def main(argv):
     assert not (
             config['SAC']['w_demonstrations_rl_term'] is True and config['SAC']['w_q_values'] is False
     )
+    # Check the consistency between 'w_demonstrations_next_actions_in_demonstrations_rl_term' and
+    # 'w_demonstrations_rl_term'
+    assert not (
+            config['SAC']['w_demonstrations_next_actions_in_demonstrations_rl_term'] is True and
+            config['SAC']['w_demonstrations_rl_term'] is False
+    )
+    # Check the consistency between 'w_entropy_in_demonstrations_rl_term' and
+    # 'w_demonstrations_rl_term'
+    assert not (
+            config['SAC']['w_entropy_in_demonstrations_rl_term'] is True and
+            config['SAC']['w_demonstrations_rl_term'] is False
+    )
     # Check the consistency between 'w_ood_rl_term' and 'w_q_values'
     assert not (
             config['SAC']['w_ood_rl_term'] is True and config['SAC']['w_q_values'] is False
@@ -103,6 +115,11 @@ def main(argv):
     # Check the consistency between 'w_ood_rl_term' and 'w_discriminator'
     assert not (
             config['SAC']['w_ood_rl_term'] is True and config['SAC']['w_discriminator'] is False
+    )
+    # Check the consistency between 'w_discriminator_rewards_in_ood_rl_term' and 'w_ood_rl_term'
+    assert not (
+            config['SAC']['w_discriminator_rewards_in_ood_rl_term'] is True and
+            config['SAC']['w_ood_rl_term'] is False
     )
 
     # Create the environment

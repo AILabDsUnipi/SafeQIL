@@ -104,6 +104,9 @@ def find_step_wise_discounted_rewards_and_extremes(demonstrations_path, gamma=0.
     """
     Find the discounted rewards for each step of each episode and determine the maximum and minimum discounted rewards.
     """
+
+    print('Computing discounted rewards ...')
+
     max_discounted_reward = float('-inf')
     min_discounted_reward = float('inf')
     all_discounted_rewards = {}
@@ -114,8 +117,11 @@ def find_step_wise_discounted_rewards_and_extremes(demonstrations_path, gamma=0.
                 data = pickle.load(f)
                 for episode_key in data['reward']:
                     rewards = list(data['reward'][episode_key].values())
+
+                    all_discounted_rewards[episode_key] = {}
                     discounted_rewards = calculate_discounted_rewards_per_step(rewards, gamma)
-                    all_discounted_rewards[episode_key] = discounted_rewards
+                    for step_counter in range(discounted_rewards.shape[0]):
+                        all_discounted_rewards[episode_key][f'step_{step_counter}'] = discounted_rewards[step_counter]
 
                     # Update max and min of discounted rewards
                     max_discounted_reward = max(max_discounted_reward, np.max(discounted_rewards))
@@ -137,8 +143,14 @@ class ExpertDataset(Dataset):
             normalize_features=False,
             normalize_rewards=False,
             smooth_actions=False,
-            smooth_factor=0.9
+            smooth_factor=0.9,
+            gamma=0.99,
     ):
+
+        print("\nLoading demonstrations ...")
+
+        # Do some checks
+        assert normalize_rewards is False, 'Discounted rewards are not computed with normalized rewards!'
 
         self.directory = directory
         self.device = device
@@ -153,8 +165,10 @@ class ExpertDataset(Dataset):
         self.idx_to_file_and_step = []
         self.data_store = {}
 
+        # Get discounted rewards
+        self.all_discounted_rewards, _, _ = find_step_wise_discounted_rewards_and_extremes(directory, gamma)
+
         # Build an index that maps a flat list index to (filename, episode, step_key)
-        print("\nLoading demonstrations ...")
         for filename in os.listdir(directory):
             if filename.endswith('.pkl'):
                 filepath = os.path.join(directory, filename)
@@ -261,6 +275,9 @@ class ExpertDataset(Dataset):
                 else:
                     idx = 0
 
+        # Discounted reward
+        disc_reward = self.all_discounted_rewards[episode][step_key]
+
         ## Reward
         reward = data['reward'][episode][step_key]
         if self.load_to_memory is False:
@@ -299,6 +316,7 @@ class ExpertDataset(Dataset):
             th.from_numpy(observations).to(th.float32).to(self.device),
             th.from_numpy(np.array(done)).to(th.float32).to(self.device),
             th.from_numpy(np.array(reward, dtype=np.float32)).to(th.float32).to(self.device),
+            th.from_numpy(np.array(disc_reward, dtype=np.float32)).to(th.float32).to(self.device),
             th.from_numpy(next_actions).to(th.float32).to(self.device),
             th.from_numpy(next_observations).to(th.float32).to(self.device),
         )
@@ -319,18 +337,20 @@ if __name__ == '__main__':
         env_id="SafetyPointGoal1-v0",
         normalize_features=True,
         smooth_actions=False,
-        smooth_factor=0.9
+        smooth_factor=0.9,
+        gamma=0.99
     )
     loader = th.utils.data.DataLoader(dataset, batch_size=10, shuffle=True)
 
     import time
     start_time = time.time()
     for iter_idx, samples in enumerate(loader):
-        acts, obs, dones, rews, next_acts, next_obs = samples
+        acts, obs, dones, rews, disc_rews, next_acts, next_obs = samples
         print("\nactions: ", acts)
         print("obs: ", obs)
         print("dones: ", dones)
         print("rewards: ", rews)
+        print("disc rewards: ", disc_rews)
         print("next_acts: ", next_acts)
         print("next_obs: ", next_obs)
         end_time = time.time()

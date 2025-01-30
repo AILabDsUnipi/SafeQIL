@@ -108,6 +108,24 @@ def main(argv):
             config['SAC']['w_entropy_in_demonstrations_rl_term'] is True and
             config['SAC']['w_demonstrations_rl_term'] is False
     )
+    # Check the consistency between 'w_compute_analytically_target_in_demonstrations_rl_term' and
+    # 'w_demonstrations_rl_term'
+    assert not (
+            config['SAC']['w_compute_analytically_target_in_demonstrations_rl_term'] is True and
+            config['SAC']['w_demonstrations_rl_term'] is False
+    )
+    # Check the consistency between 'w_compute_analytically_target_in_demonstrations_rl_term' and
+    # 'w_demonstrations_next_actions_in_demonstrations_rl_term'
+    assert not (
+            config['SAC']['w_compute_analytically_target_in_demonstrations_rl_term'] is True and
+            config['SAC']['w_demonstrations_next_actions_in_demonstrations_rl_term'] is True
+    )
+    # Check the consistency between 'w_compute_analytically_target_in_demonstrations_rl_term' and
+    # 'w_entropy_in_demonstrations_rl_term'
+    assert not (
+            config['SAC']['w_compute_analytically_target_in_demonstrations_rl_term'] is True and
+            config['SAC']['w_entropy_in_demonstrations_rl_term'] is True
+    )
     # Check the consistency between 'w_ood_rl_term' and 'w_q_values'
     assert not (
             config['SAC']['w_ood_rl_term'] is True and config['SAC']['w_q_values'] is False
@@ -121,6 +139,29 @@ def main(argv):
             config['SAC']['w_discriminator_rewards_in_ood_rl_term'] is True and
             config['SAC']['w_ood_rl_term'] is False
     )
+    # Check the consistency between 'w_entropy_in_ood_rl_term' and 'w_ood_rl_term'
+    assert not (
+            config['SAC']['w_entropy_in_ood_rl_term'] is True and
+            config['SAC']['w_ood_rl_term'] is False
+    )
+    # Check the consistency between 'w_gail_sac' and 'w_q_values'
+    assert not (config['SAC']['w_gail_sac'] is True and config['SAC']['w_q_values'] is False)
+    # Check the consistency between 'w_gail_sac' and 'w_discriminator'
+    assert not (config['SAC']['w_gail_sac'] is True and config['SAC']['w_discriminator'] is False)
+    # Check the consistency between 'w_gail_sac' and 'w_discriminator'
+    assert not (config['SAC']['w_gail_sac'] is True and config['SAC']['w_actions_in_discriminator'] is False)
+    # Check the consistency between 'w_gail_sac' and 'w_max_min'
+    assert not (config['SAC']['w_gail_sac'] is True and config['SAC']['w_max_min'] is True)
+    # Check the consistency between 'w_gail_sac' and 'w_compute_analytically_min_dem_q_value'
+    assert not (config['SAC']['w_gail_sac'] is True and config['SAC']['w_compute_analytically_min_dem_q_value'] is True)
+    # Check the consistency between 'w_gail_sac' and 'w_lower_bound'
+    assert not (config['SAC']['w_gail_sac'] is True and config['SAC']['w_lower_bound'] is True)
+    # Check the consistency between 'w_gail_sac' and 'w_use_target_critic'
+    assert not (config['SAC']['w_gail_sac'] is True and config['SAC']['w_use_target_critic'] is True)
+    # Check the consistency between 'w_gail_sac' and 'w_demonstrations_rl_term'
+    assert not (config['SAC']['w_gail_sac'] is True and config['SAC']['w_demonstrations_rl_term'] is True)
+    # Check the consistency between 'w_gail_sac' and 'w_ood_rl_term'
+    assert not (config['SAC']['w_gail_sac'] is True and config['SAC']['w_ood_rl_term'] is True)
 
     # Create the environment
     env = safety_gymnasium.make(

@@ -139,6 +139,17 @@ def main(argv):
             config['SAC']['w_discriminator_rewards_in_ood_rl_term'] is True and
             config['SAC']['w_ood_rl_term'] is False
     )
+    # Check the consistency between 'w_discriminator_discounted_rewards_in_ood_rl_term' and 'w_ood_rl_term'
+    assert not (
+            config['SAC']['w_discriminator_discounted_rewards_in_ood_rl_term'] is True and
+            config['SAC']['w_ood_rl_term'] is False
+    )
+    # Check the consistency between 'w_discriminator_discounted_rewards_in_ood_rl_term' and
+    # 'w_discriminator_rewards_in_ood_rl_term'
+    assert not (
+            config['SAC']['w_discriminator_discounted_rewards_in_ood_rl_term'] is True and
+            config['SAC']['w_discriminator_rewards_in_ood_rl_term'] is True
+    )
     # Check the consistency between 'w_entropy_in_ood_rl_term' and 'w_ood_rl_term'
     assert not (
             config['SAC']['w_entropy_in_ood_rl_term'] is True and

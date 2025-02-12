@@ -121,6 +121,7 @@ class SAC(ABC):
             self.w_ood_rl_term: bool = self.config['SAC']['w_ood_rl_term']
             self.w_discriminator_rewards_in_ood_rl_term: bool = self.config['SAC']['w_discriminator_rewards_in_ood_rl_term']
             self.discriminator_reward_function_in_ood_rl_term: str = self.config['SAC']['discriminator_reward_function_in_ood_rl_term']
+            self.w_discriminator_discounted_rewards_in_ood_rl_term: bool =  self.config['SAC']['w_discriminator_discounted_rewards_in_ood_rl_term']
             self.w_entropy_in_ood_rl_term: bool = self.config['SAC']['w_entropy_in_ood_rl_term']
             self.w_gail_sac: bool = self.config['SAC']['w_gail_sac']
             self.discriminator_reward_function_in_gail_sac: str = self.config['SAC']['discriminator_reward_function_in_gail_sac']
@@ -560,7 +561,7 @@ class SAC(ABC):
                     max_dem_qvals_value
                  ) = self.calc_constraint_q_loss_term(
                     [expert_actions, expert_observations, expert_done, expert_reward, expert_disc_reward, expert_next_actions, expert_next_observations],
-                    [replay_data.actions, replay_data.observations],
+                    [replay_data.actions, replay_data.observations, replay_data.dones, replay_data.rewards],
                     current_q_values,
                     target_q_values_wo_reward,
                     target_q_values_wo_entropy_wo_reward,
@@ -692,7 +693,7 @@ class SAC(ABC):
                 elif self.w_q_values is True:
                     constraint_lambda_loss = self.calc_constraint_lambda_loss_w_q_values(
                         [expert_actions, expert_observations, expert_done, expert_reward, expert_disc_reward, expert_next_actions, expert_next_observations],
-                        [replay_data.actions, replay_data.observations],
+                        [replay_data.actions, replay_data.observations, replay_data.dones, replay_data.rewards],
                         current_q_values,
                         target_q_values_wo_reward,
                         target_q_values_wo_entropy_wo_reward,
@@ -1061,6 +1062,8 @@ class SAC(ABC):
         # Rollouts' state-action pairs
         rollout_actions = rollout_data[0]
         rollout_observations = rollout_data[1]
+        rollout_dones = rollout_data[2]
+        rollout_rewards = rollout_data[3]
 
         ## Compute the constraint critic loss and the corresponding TD term
         # Get the minimum Q-value of the demonstrated state-action pairs to use it as the target (without grads)
@@ -1100,6 +1103,9 @@ class SAC(ABC):
                     "The selected 'discriminator_reward_function_in_ood_rl_term': "
                     f"{self.discriminator_reward_function_in_ood_rl_term} is not supported!"
                 )
+        elif self.w_discriminator_discounted_rewards_in_ood_rl_term is True:
+            # Add the environment reward discounted by the Discriminator's estimates
+            target_rollout_q_values += discriminator_rollout_preds*rollout_rewards
         td_term_constraint_critic_loss = 0.5 * sum(
             th.mean(
                 th.pow(

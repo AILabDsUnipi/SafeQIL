@@ -47,12 +47,12 @@ SAC:
   w_std_grads: False
   # For Q-values approach
   w_q_values: True
-  w_max_min: False #  True
+  w_max_min: True
   w_lower_bound: False
   w_use_target_critic: False
-  w_compute_analytically_min_dem_q_value: False  # True
+  w_compute_analytically_min_dem_q_value: True
   w_discriminator: True
-  w_actions_in_discriminator: True  # False
+  w_actions_in_discriminator: False
   discriminator_lr: 0.0003
   discriminator_batch_size: 256
   discriminator_gradient_steps: 1
@@ -60,17 +60,18 @@ SAC:
   discriminator_layer2_size: 32 # number of neurons in the second hidden layer
   w_discriminator_icrl_regularization: False
   discriminator_icrl_regularization_coef: 0.5
-  w_discriminator_dac_regularization: False
+  w_discriminator_dac_regularization: True
   discriminator_dac_regularization_coef: 10.0
-  w_demonstrations_rl_term: False  # True
+  w_demonstrations_rl_term: True
   w_demonstrations_next_actions_in_demonstrations_rl_term: False
   w_entropy_in_demonstrations_rl_term: False
-  w_compute_analytically_target_in_demonstrations_rl_term: False  # True
-  w_ood_rl_term: False  # True
-  w_discriminator_rewards_in_ood_rl_term:  False  # True
+  w_compute_analytically_target_in_demonstrations_rl_term: True
+  w_ood_rl_term: True
+  w_discriminator_rewards_in_ood_rl_term: False
   discriminator_reward_function_in_ood_rl_term: 'GAIL'  # Options: 'GAIL' (survival bonus), 'saturing_GANs_loss' (per step penalty), 'AIRL' (positive and negative components). From DAC: https://arxiv.org/pdf/1809.02925
-  w_entropy_in_ood_rl_term: False  # True
-  w_gail_sac: True  # Pure GAIL without all the rest terms.
+  w_discriminator_discounted_rewards_in_ood_rl_term: True
+  w_entropy_in_ood_rl_term: False
+  w_gail_sac: False  # Pure GAIL without all the rest terms.
   discriminator_reward_function_in_gail_sac: 'GAIL'  # Options: 'GAIL' (survival bonus), 'saturing_GANs_loss' (per step penalty), 'AIRL' (positive and negative components). From DAC: https://arxiv.org/pdf/1809.02925
 
   # Demonstrations
@@ -103,8 +104,8 @@ Experiment:
 
   # Testing
   test_model: False # if True, no training
-  load_checkpoint: True
-  checkpoint_path: "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/sac_w_constr_opt_w_constr_critic_loss_w_max_min_w_compute_analytically_min_dem_q_value_w_discr_w_dac_reg_dac_coef=0.05_w_dem_rl_term_w_dem_next_actions_w_ood_rl_term_w_discr_rewards_in_ood_rl_term_results/tmp/sac_single_agent_exp_sac_w_constr_opt_w_constr_critic_loss_w_max_min_w_compute_analytically_min_dem_q_value_w_discr_w_dac_reg_dac_coef=0.05_w_dem_rl_term_w_dem_next_actions_w_ood_rl_term_w_discr_rewards_in_ood_rl_term_results_1/chkpts"
+  load_checkpoint: False
+  checkpoint_path: "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/sac_w_constr_opt_w_gail_sac_w_dac_reg_dac_coef=0.005_results/train_results/tmp/sac_single_agent_exp_sac_w_constr_opt_w_gail_sac_w_dac_reg_dac_coef=0.005_results_1/chkpts"
   checkpoint_prefix: "last"  # Options: "best_reward", "lowest_constr", "last"
 
   render: False

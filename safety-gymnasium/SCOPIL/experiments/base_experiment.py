@@ -1,6 +1,8 @@
 import os
 from abc import abstractmethod
 
+import torch as th
+
 
 class BaseExperiment:
     def __init__(
@@ -17,7 +19,17 @@ class BaseExperiment:
         self.algo = None
         self.seed = seed
 
-        # retrieve parameters
+        # Set torch threads
+        if 'device' in list(config['Experiment'].keys()):
+            self.device = config['Experiment']['device']
+        else:
+            self.device = 'cpu'
+        if self.device == 'cpu' and 'torch_threads' in list(config['Experiment'].keys()):
+            th.set_num_threads(config['Experiment']['torch_threads'])
+        else:
+            th.set_num_threads(1)
+
+        # Retrieve parameters
         self.config = config  # configuration file dictionary
         self.env = environment  # environment to play in
         self.test_model = config['Experiment']['test_model']  # check if only test

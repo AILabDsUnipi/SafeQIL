@@ -67,9 +67,9 @@ SAC:
   w_entropy_in_demonstrations_rl_term: False
   w_compute_analytically_target_in_demonstrations_rl_term: True
   w_ood_rl_term: True
-  w_discriminator_rewards_in_ood_rl_term: False
+  w_discriminator_rewards_in_ood_rl_term: True
   discriminator_reward_function_in_ood_rl_term: 'GAIL'  # Options: 'GAIL' (survival bonus), 'saturing_GANs_loss' (per step penalty), 'AIRL' (positive and negative components). From DAC: https://arxiv.org/pdf/1809.02925
-  w_discriminator_discounted_rewards_in_ood_rl_term: True
+  w_discriminator_discounted_rewards_in_ood_rl_term: False
   w_entropy_in_ood_rl_term: False
   w_gail_sac: False  # Pure GAIL without all the rest terms.
   discriminator_reward_function_in_gail_sac: 'GAIL'  # Options: 'GAIL' (survival bonus), 'saturing_GANs_loss' (per step penalty), 'AIRL' (positive and negative components). From DAC: https://arxiv.org/pdf/1809.02925
@@ -105,13 +105,14 @@ Experiment:
   # Testing
   test_model: False # if True, no training
   load_checkpoint: False
-  checkpoint_path: "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/sac_w_constr_opt_w_gail_sac_w_dac_reg_dac_coef=0.005_results/train_results/tmp/sac_single_agent_exp_sac_w_constr_opt_w_gail_sac_w_dac_reg_dac_coef=0.005_results_1/chkpts"
+  checkpoint_path: "/home/georgepap/PycharmProjects/results_/sac_w_constr_opt_w_constraint_critic_loss_w_max_min_w_anal_min_dem_q_value_w_discr_w_dac_reg_dac_coef=0.0005_w_dem_rl_term_w_anal_target_in_dem_rl_term_w_ood_rl_term_w_discr_rew_in_ood_rl_term_discr_loss=AIRL_results/tmp/sac_single_agent_exp_sac_w_constr_opt_w_constraint_critic_loss_w_max_min_w_anal_min_dem_q_value_w_discr_w_dac_reg_dac_coef=0.0005_w_dem_rl_term_w_anal_target_in_dem_rl_term_w_ood_rl_term_w_discr_rew_in_ood_rl_term_discr_loss=AIRL_results_1/chkpts"
   checkpoint_prefix: "last"  # Options: "best_reward", "lowest_constr", "last"
 
   render: False
   debug_: False
   test_window_size_moving_avg: 10
   seed: 2024  # None # 2024  # None or int
-  device: "cuda"  # "cuda" or "cpu"
+  device: "cpu"  # "cuda" or "cpu"
+  torch_threads: 1
 
 

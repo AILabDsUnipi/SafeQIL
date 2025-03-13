@@ -11,7 +11,6 @@ import numpy as np
 import torch
 import torch as th
 from gymnasium import spaces
-from torch.nn import functional as F
 
 from .buffer import ReplayBuffer
 from .discriminator import Discriminator
@@ -23,7 +22,8 @@ from .utils import (
     get_parameters_by_name,
     polyak_update
 )
-from SCOPIL.utils.demonstration_utils import ExpertDataset, min_max_discounted_rew_values
+from SCOPIL.utils.demonstration_utils import ExpertDataset, stats_discounted_rew_values
+from SCOPIL.utils.torch_utils import ExpectileLoss
 
 SelfSAC = TypeVar("SelfSAC", bound="SAC")
 
@@ -110,18 +110,24 @@ class SAC(ABC):
             self.w_kl_div: bool = self.config['SAC']['w_kl_div']
             self.w_q_values: bool = self.config['SAC']['w_q_values']
             self.w_max_min: bool = self.config['SAC']['w_max_min']
+            self.max_min_coef: float = self.config['SAC']['max_min_coef']
             self.w_lower_bound: bool = self.config['SAC']['w_lower_bound']
+            self.w_expectile_loss: bool = self.config['SAC']['w_expectile_loss']
+            self.expectile_t: float = self.config['SAC']['expectile_t']
             self.w_use_target_critic: bool = self.config['SAC']['w_use_target_critic']
             self.w_compute_analytically_min_dem_q_value: bool = self.config['SAC']['w_compute_analytically_min_dem_q_value']
+            self.dem_q_value_stat: str = self.config['SAC']['dem_q_value_stat']
             self.w_discriminator: bool = self.config['SAC']['w_discriminator']
             self.w_demonstrations_rl_term: bool = self.config['SAC']['w_demonstrations_rl_term']
+            self.demonstrations_rl_term_coef: float = self.config['SAC']['demonstrations_rl_term_coef']
             self.w_demonstrations_next_actions_in_demonstrations_rl_term: bool = self.config['SAC']['w_demonstrations_next_actions_in_demonstrations_rl_term']
             self.w_entropy_in_demonstrations_rl_term: bool = self.config['SAC']['w_entropy_in_demonstrations_rl_term']
             self.w_compute_analytically_target_in_demonstrations_rl_term: bool = self.config['SAC']['w_compute_analytically_target_in_demonstrations_rl_term']
             self.w_ood_rl_term: bool = self.config['SAC']['w_ood_rl_term']
+            self.ood_rl_term_coef: float = self.config['SAC']['ood_rl_term_coef']
             self.w_discriminator_rewards_in_ood_rl_term: bool = self.config['SAC']['w_discriminator_rewards_in_ood_rl_term']
             self.discriminator_reward_function_in_ood_rl_term: str = self.config['SAC']['discriminator_reward_function_in_ood_rl_term']
-            self.w_discriminator_discounted_rewards_in_ood_rl_term: bool =  self.config['SAC']['w_discriminator_discounted_rewards_in_ood_rl_term']
+            self.w_discriminator_discounted_rewards_in_ood_rl_term: bool = self.config['SAC']['w_discriminator_discounted_rewards_in_ood_rl_term']
             self.w_entropy_in_ood_rl_term: bool = self.config['SAC']['w_entropy_in_ood_rl_term']
             self.w_gail_sac: bool = self.config['SAC']['w_gail_sac']
             self.discriminator_reward_function_in_gail_sac: str = self.config['SAC']['discriminator_reward_function_in_gail_sac']
@@ -297,7 +303,14 @@ class SAC(ABC):
                         self.mse_loss_func = th.nn.MSELoss()
                 if self.w_q_values is True:
                     if self.w_compute_analytically_min_dem_q_value is True:
-                        self.max_disc_reward, self.min_disc_reward = min_max_discounted_rew_values(
+                        (
+                            self.max_disc_reward,
+                            self.min_disc_reward,
+                            self.median_disc_reward,
+                            self.mean_disc_reward,
+                            self.twenty_five_quant_disc_reward,
+                            self.seventy_five_quant_disc_reward
+                        ) = stats_discounted_rew_values(
                             self.config['game']['env_id'],
                             self.config['SAC']['expert_dataset_path'],
                             self.gamma
@@ -312,6 +325,29 @@ class SAC(ABC):
                             dtype=th.float32,
                             device=self.device
                         )
+                        self.median_disc_reward = th.tensor(
+                            [self.median_disc_reward],
+                            dtype=th.float32,
+                            device=self.device
+                        )
+                        self.mean_disc_reward = th.tensor(
+                            [self.mean_disc_reward],
+                            dtype=th.float32,
+                            device=self.device
+                        )
+                        self.twenty_five_quant_disc_reward = th.tensor(
+                            [self.twenty_five_quant_disc_reward],
+                            dtype=th.float32,
+                            device=self.device
+                        )
+                        self.seventy_five_quant_disc_reward = th.tensor(
+                            [self.seventy_five_quant_disc_reward],
+                            dtype=th.float32,
+                            device=self.device
+                        )
+                    if self.w_expectile_loss is True:
+                        # We use 'none' reduction to allow discounting with Discriminator estimates
+                        self.expectile_loss = ExpectileLoss(expectile=self.expectile_t, reduction="none")
 
     def _create_aliases(self) -> None:
         self.actor = self.policy.actor
@@ -1066,26 +1102,70 @@ class SAC(ABC):
         rollout_rewards = rollout_data[3]
 
         ## Compute the constraint critic loss and the corresponding TD term
-        # Get the minimum Q-value of the demonstrated state-action pairs to use it as the target (without grads)
+        # Get the specified Q-value statistic of the demonstrated state-action pairs
+        # to use it as the target (without grads)
         scaled_expert_actions = self.scale_and_clamp_demo_actions(actions)
         dem_q_values = self.critic(observations, scaled_expert_actions)
         dem_q_values_catted = th.cat(dem_q_values, dim=1)
-        min_dem_q_value = th.min(dem_q_values_catted).detach()
-        if self.w_use_target_critic is True:
-            min_dem_q_value = th.min(th.cat(self.critic_target(observations, scaled_expert_actions), dim=1)).detach()
-        elif self.w_compute_analytically_min_dem_q_value is True:
-            min_dem_q_value = self.min_disc_reward
+        dem_q_values_catted_target = th.cat(self.critic_target(observations, scaled_expert_actions), dim=1)
+        # Get the statistic Q-value
+        if self.dem_q_value_stat == 'min':
+            dem_q_value_stat = th.min(dem_q_values_catted).detach()
+            if self.w_use_target_critic is True:
+                dem_q_value_stat = th.min(dem_q_values_catted_target).detach()
+            elif self.w_compute_analytically_min_dem_q_value is True:
+                dem_q_value_stat = self.min_disc_reward
+        elif self.dem_q_value_stat == 'max':
+            dem_q_value_stat = th.max(dem_q_values_catted).detach()
+            if self.w_use_target_critic is True:
+                dem_q_value_stat = th.max(dem_q_values_catted_target).detach()
+            elif self.w_compute_analytically_min_dem_q_value is True:
+                dem_q_value_stat = self.max_disc_reward
+        elif self.dem_q_value_stat == 'mean':
+            dem_q_value_stat = th.mean(dem_q_values_catted).detach()
+            if self.w_use_target_critic is True:
+                dem_q_value_stat = th.mean(dem_q_values_catted_target).detach()
+            elif self.w_compute_analytically_min_dem_q_value is True:
+                dem_q_value_stat = self.mean_disc_reward
+        elif self.dem_q_value_stat == 'median':
+            dem_q_value_stat = th.median(dem_q_values_catted).detach()
+            if self.w_use_target_critic is True:
+                dem_q_value_stat = th.median(dem_q_values_catted_target).detach()
+            elif self.w_compute_analytically_min_dem_q_value is True:
+                dem_q_value_stat = self.median_disc_reward
+        elif self.dem_q_value_stat == '25_quant':
+            dem_q_value_stat = th.quantile(dem_q_values_catted, 0.25).detach()
+            if self.w_use_target_critic is True:
+                dem_q_value_stat = th.quantile(dem_q_values_catted_target, 0.25).detach()
+            elif self.w_compute_analytically_min_dem_q_value is True:
+                dem_q_value_stat = self.twenty_five_quant_disc_reward
+        elif self.dem_q_value_stat == '75_quant':
+            dem_q_value_stat = th.quantile(dem_q_values_catted, 0.75).detach()
+            if self.w_use_target_critic is True:
+                dem_q_value_stat = th.quantile(dem_q_values_catted_target, 0.75).detach()
+            elif self.w_compute_analytically_min_dem_q_value is True:
+                dem_q_value_stat = self.seventy_five_quant_disc_reward
+        else:
+            raise ValueError(f"The specified statistic is not supported: {self.dem_q_value_stat}")
         # Constraint critic loss
-        constraint_critic_loss = 0.5 * sum(
-            th.mean(
-                th.pow(
-                    (th.maximum(rollout_q, min_dem_q_value) if self.w_max_min is True else rollout_q) - min_dem_q_value,
-                    2
-                ) * (1. if self.w_discriminator is False else (1. - discriminator_rollout_preds))
-            ) for rollout_q in rollout_q_values
-        )
+        if self.w_expectile_loss is True:
+            constraint_critic_loss = 0.5 * (self.max_min_coef if self.w_max_min is True else 1.0) * sum(
+                th.mean(
+                    self.expectile_loss(
+                        rollout_q, dem_q_value_stat
+                    ) * (1. if self.w_discriminator is False else (1. - discriminator_rollout_preds))
+                ) for rollout_q in rollout_q_values
+            )
+        else:
+            constraint_critic_loss = 0.5 * (self.max_min_coef if self.w_max_min is True else 1.0) * sum(
+                th.mean(
+                    th.pow(
+                        (th.maximum(rollout_q, dem_q_value_stat) if self.w_max_min is True else rollout_q) - dem_q_value_stat,
+                        2
+                    ) * (1. if self.w_discriminator is False else (1. - discriminator_rollout_preds))
+                ) for rollout_q in rollout_q_values
+            )
         ## TD term
-        target_rollout_q_values = None
         if self.w_entropy_in_ood_rl_term is True:
             target_rollout_q_values = target_rollout_q_values_wo_reward
         else:
@@ -1106,7 +1186,7 @@ class SAC(ABC):
         elif self.w_discriminator_discounted_rewards_in_ood_rl_term is True:
             # Add the environment reward discounted by the Discriminator's estimates
             target_rollout_q_values += discriminator_rollout_preds*rollout_rewards
-        td_term_constraint_critic_loss = 0.5 * sum(
+        td_term_constraint_critic_loss = 0.5 * self.ood_rl_term_coef * sum(
             th.mean(
                 th.pow(
                     rollout_q - target_rollout_q_values,
@@ -1170,7 +1250,7 @@ class SAC(ABC):
             ## Get current Q-values estimates for each critic network using actions from demonstrations
             current_q_values = self.critic(observations, scaled_expert_actions)
             ## Compute the loss
-            dem_rl_term_constraint_critic_loss = 0.5 * sum(
+            dem_rl_term_constraint_critic_loss = 0.5 * self.demonstrations_rl_term_coef * sum(
                 th.mean(
                     th.pow(current_q - target_q_values, 2)
                 ) for current_q in current_q_values
@@ -1204,7 +1284,7 @@ class SAC(ABC):
         mean_dem_probs_value = th.mean(log_probs_pi).exp().item()
         min_dem_probs_value = log_probs_pi.min().exp().item()
         max_dem_probs_value = log_probs_pi.max().exp().item()
-        # Q-values of the demonstrated actions
+        # Q-values of the policy actions for the demonstrations' observations
         q_values_pi = th.cat(self.critic(observations, actions_pi), dim=1)
         min_q_values_pi, _ = th.min(q_values_pi, dim=1, keepdim=True)
         mean_dem_qvals_value = th.mean(min_q_values_pi).item()

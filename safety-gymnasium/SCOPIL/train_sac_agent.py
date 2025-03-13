@@ -173,6 +173,8 @@ def main(argv):
     assert not (config['SAC']['w_gail_sac'] is True and config['SAC']['w_demonstrations_rl_term'] is True)
     # Check the consistency between 'w_gail_sac' and 'w_ood_rl_term'
     assert not (config['SAC']['w_gail_sac'] is True and config['SAC']['w_ood_rl_term'] is True)
+    # Check the consistency between 'w_expectile_loss' and 'w_max_min'
+    assert not (config['SAC']['w_expectile_loss'] is True and config['SAC']['w_max_min'] is False)
 
     # Create the environment
     env = safety_gymnasium.make(
@@ -185,7 +187,7 @@ def main(argv):
     seed = get_seed(config)
 
     # Create the directories for files and plots of this experiment
-    files_dir, plot_dir = get_result_dirs(config, argv[1], argv[0])
+    files_dir, plot_dir = get_result_dirs(argv[1], argv[0])
 
     # Create the SAC agent
     sac_agent = get_sac_agent(config, env, files_dir, seed=seed)

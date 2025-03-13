@@ -54,7 +54,7 @@ def min_max_rew_values(env_id: str):
     return max_reward, min_reward
 
 
-def min_max_discounted_rew_values(env_id: str, demonstrations_path, gamma):
+def stats_discounted_rew_values(env_id: str, demonstrations_path, gamma):
 
     # Normalize the path to the correct format for the OS
     norm_demonstrations_path = os.path.normpath(demonstrations_path)
@@ -63,8 +63,6 @@ def min_max_discounted_rew_values(env_id: str, demonstrations_path, gamma):
     # Get the second last part
     demonstration_id = norm_demonstrations_path_parts[-2]
 
-    max_disc_reward = None
-    min_disc_reward = None
     if (
             env_id == 'SafetyPointGoal1-v0' and
             demonstration_id == 'human_alone_exp_human_data_simple_w_action_smooth=0.5_1' and
@@ -72,13 +70,24 @@ def min_max_discounted_rew_values(env_id: str, demonstrations_path, gamma):
     ):
         max_disc_reward = 2.9406837539017032
         min_disc_reward = -0.5044503041748538
+        median_disc_reward = 1.1027654302168344
+        mean_disc_reward = 1.0585335490560195
+        twenty_five_quant_disc_reward = 0.6779178411930585
+        seventy_five_quant_disc_reward = 1.4327907224436196
     else:
         raise ValueError(
             f"Not supported combination!"
             f"\nEnvironment: {env_id}, gamma: {gamma}."
         )
 
-    return max_disc_reward, min_disc_reward
+    return (
+        max_disc_reward,
+        min_disc_reward,
+        median_disc_reward,
+        mean_disc_reward,
+        twenty_five_quant_disc_reward,
+        seventy_five_quant_disc_reward
+    )
 
 
 def calculate_discounted_rewards_per_step(rewards, gamma=0.99):
@@ -100,16 +109,16 @@ def calculate_discounted_rewards_per_step(rewards, gamma=0.99):
     return discounted_rewards
 
 
-def find_step_wise_discounted_rewards_and_extremes(demonstrations_path, gamma=0.99):
+def find_step_wise_discounted_rewards_and_statistics(demonstrations_path, gamma=0.99):
     """
-    Find the discounted rewards for each step of each episode and determine the maximum and minimum discounted rewards.
+    Find the discounted rewards for each step of each episode and compute statistics:
+    maximum, minimum, mean, median, 25th quantile, and 75th quantile.
     """
 
     print('Computing discounted rewards ...')
 
-    max_discounted_reward = float('-inf')
-    min_discounted_reward = float('inf')
     all_discounted_rewards = {}
+    discounted_rewards_list = []
 
     for file_name in os.listdir(demonstrations_path):
         if file_name.endswith('.pkl'):
@@ -120,16 +129,36 @@ def find_step_wise_discounted_rewards_and_extremes(demonstrations_path, gamma=0.
 
                     all_discounted_rewards[episode_key] = {}
                     discounted_rewards = calculate_discounted_rewards_per_step(rewards, gamma)
+                    discounted_rewards_list.extend(discounted_rewards)
+
                     for step_counter in range(discounted_rewards.shape[0]):
                         all_discounted_rewards[episode_key][f'step_{step_counter}'] = discounted_rewards[step_counter]
 
-                    # Update max and min of discounted rewards
-                    max_discounted_reward = max(max_discounted_reward, np.max(discounted_rewards))
-                    min_discounted_reward = min(min_discounted_reward, np.min(discounted_rewards))
+    # Calculate statistics after gathering all discounted rewards
+    max_discounted_reward = np.max(discounted_rewards_list)
+    min_discounted_reward = np.min(discounted_rewards_list)
+    median_discounted_reward = np.median(discounted_rewards_list)
+    mean_discounted_reward = np.mean(discounted_rewards_list)
+    quantile_25 = np.quantile(discounted_rewards_list, 0.25)
+    quantile_75 = np.quantile(discounted_rewards_list, 0.75)
 
+    # Print statistics
     print("Maximum Discounted Reward: ", max_discounted_reward)
     print("Minimum Discounted Reward: ", min_discounted_reward)
-    return all_discounted_rewards, max_discounted_reward, min_discounted_reward
+    print("Median Discounted Reward: ", median_discounted_reward)
+    print("Mean Discounted Reward: ", mean_discounted_reward)
+    print("25th Quantile of Discounted Reward: ", quantile_25)
+    print("75th Quantile of Discounted Reward: ", quantile_75)
+
+    return (
+        all_discounted_rewards,
+        max_discounted_reward,
+        min_discounted_reward,
+        median_discounted_reward,
+        mean_discounted_reward,
+        quantile_25,
+        quantile_75
+    )
 
 
 class ExpertDataset(Dataset):
@@ -166,7 +195,7 @@ class ExpertDataset(Dataset):
         self.data_store = {}
 
         # Get discounted rewards
-        self.all_discounted_rewards, _, _ = find_step_wise_discounted_rewards_and_extremes(directory, gamma)
+        self.all_discounted_rewards, *_ = find_step_wise_discounted_rewards_and_statistics(directory, gamma)
 
         # Build an index that maps a flat list index to (filename, episode, step_key)
         for filename in os.listdir(directory):
@@ -326,34 +355,33 @@ if __name__ == '__main__':
 
     _demonstrations_path = '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/demonstrations'
 
-    # find_min_max_observation_reward(_demonstrations_path)
-    # find_step_wise_discounted_rewards_and_extremes(_demonstrations_path)
+    find_step_wise_discounted_rewards_and_statistics(_demonstrations_path)
 
-    # Test 'ExpertDataset' class
-    dataset = ExpertDataset(
-        _demonstrations_path,
-        use_images=False,
-        load_to_memory=True,
-        env_id="SafetyPointGoal1-v0",
-        normalize_features=True,
-        smooth_actions=False,
-        smooth_factor=0.9,
-        gamma=0.99
-    )
-    loader = th.utils.data.DataLoader(dataset, batch_size=10, shuffle=True)
-
-    import time
-    start_time = time.time()
-    for iter_idx, samples in enumerate(loader):
-        acts, obs, dones, rews, disc_rews, next_acts, next_obs = samples
-        print("\nactions: ", acts)
-        print("obs: ", obs)
-        print("dones: ", dones)
-        print("rewards: ", rews)
-        print("disc rewards: ", disc_rews)
-        print("next_acts: ", next_acts)
-        print("next_obs: ", next_obs)
-        end_time = time.time()
-        total_time = end_time - start_time
-        print("total time: ", total_time)
-        exit(0)
+    # # Test 'ExpertDataset' class
+    # dataset = ExpertDataset(
+    #     _demonstrations_path,
+    #     use_images=False,
+    #     load_to_memory=True,
+    #     env_id="SafetyPointGoal1-v0",
+    #     normalize_features=True,
+    #     smooth_actions=False,
+    #     smooth_factor=0.9,
+    #     gamma=0.99
+    # )
+    # loader = th.utils.data.DataLoader(dataset, batch_size=10, shuffle=True)
+    #
+    # import time
+    # start_time = time.time()
+    # for iter_idx, samples in enumerate(loader):
+    #     acts, obs, dones, rews, disc_rews, next_acts, next_obs = samples
+    #     print("\nactions: ", acts)
+    #     print("obs: ", obs)
+    #     print("dones: ", dones)
+    #     print("rewards: ", rews)
+    #     print("disc rewards: ", disc_rews)
+    #     print("next_acts: ", next_acts)
+    #     print("next_obs: ", next_obs)
+    #     end_time = time.time()
+    #     total_time = end_time - start_time
+    #     print("total time: ", total_time)
+    #     exit(0)

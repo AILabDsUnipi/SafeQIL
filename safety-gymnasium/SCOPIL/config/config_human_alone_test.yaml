@@ -1,9 +1,6 @@
 game:
     env_id: "SafetyPointGoal1Debug-v0"
 
-NO_ALGO:
-  chkpt_dir: "human_alone_exp"
-
 Experiment:
 
   # Rendering

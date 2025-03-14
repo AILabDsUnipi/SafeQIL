@@ -8,8 +8,6 @@ import torch as th  # Needed in __main__
 
 def min_max_obs_values(env_id: str):
 
-    max_obs = None
-    min_obs = None
     if env_id == 'SafetyPointGoal1-v0':
         max_obs = np.array([
             3.24462421, 13.7011033, 9.81,       1.46503807, 0.64846094, 0.,
@@ -41,10 +39,15 @@ def min_max_obs_values(env_id: str):
     return max_obs, min_obs
 
 
+def normalize_features_func(features, env_id):
+    max_obs, min_obs = min_max_obs_values(env_id)
+    features = (features - min_obs) / (max_obs - min_obs + 1e-8)  # avoid division by zero
+
+    return features
+
+
 def min_max_rew_values(env_id: str):
 
-    max_reward = None
-    min_reward = None
     if env_id == 'SafetyPointGoal1-v0':
         max_reward = 1.0278260468214948
         min_reward = -0.02666655807640672
@@ -54,7 +57,7 @@ def min_max_rew_values(env_id: str):
     return max_reward, min_reward
 
 
-def stats_discounted_rew_values(env_id: str, demonstrations_path, gamma):
+def stats_discounted_rew_values(env_id: str, normalize_rewards: bool, demonstrations_path, gamma):
 
     # Normalize the path to the correct format for the OS
     norm_demonstrations_path = os.path.normpath(demonstrations_path)
@@ -68,12 +71,22 @@ def stats_discounted_rew_values(env_id: str, demonstrations_path, gamma):
             demonstration_id == 'human_alone_exp_human_data_simple_w_action_smooth=0.5_1' and
             gamma == 0.99
     ):
-        max_disc_reward = 2.9406837539017032
-        min_disc_reward = -0.5044503041748538
-        median_disc_reward = 1.1027654302168344
-        mean_disc_reward = 1.0585335490560195
-        twenty_five_quant_disc_reward = 0.6779178411930585
-        seventy_five_quant_disc_reward = 1.4327907224436196
+
+        if normalize_rewards is True:
+            max_disc_reward = 5.316081952483461
+            min_disc_reward = 0.015163055896130572
+            median_disc_reward = 3.4690537858122976
+            mean_disc_reward = 3.2823386148022387
+            twenty_five_quant_disc_reward = 2.977138070490666
+            seventy_five_quant_disc_reward = 3.8384858536377635
+        else:
+            max_disc_reward = 2.9406837539017032
+            min_disc_reward = -0.5044503041748538
+            median_disc_reward = 1.1027654302168344
+            mean_disc_reward = 1.0585335490560195
+            twenty_five_quant_disc_reward = 0.6779178411930585
+            seventy_five_quant_disc_reward = 1.4327907224436196
+
     else:
         raise ValueError(
             f"Not supported combination!"
@@ -90,11 +103,20 @@ def stats_discounted_rew_values(env_id: str, demonstrations_path, gamma):
     )
 
 
-def calculate_discounted_rewards_per_step(rewards, gamma=0.99):
+def normalize_reward_func(reward, env_id):
+    max_rew, min_rew = min_max_rew_values(env_id)
+    reward = (reward - min_rew) / (max_rew - min_rew + 1e-8)  # avoid division by zero
+
+    return reward
+
+
+def calculate_discounted_rewards_per_step(rewards, normalize_reward, env_id, gamma=0.99):
     """
     Calculate the discounted rewards for each step within an episode.
     Args:
         rewards: List of rewards for one episode.
+        normalize_reward: Boolean determining whether to normalize the rewards or not.
+        env_id: String of the environment id.
         gamma: Discount factor.
     Returns:
         np.array of discounted rewards for each step.
@@ -104,12 +126,16 @@ def calculate_discounted_rewards_per_step(rewards, gamma=0.99):
     cumulative_reward = 0
     # Compute discounted rewards in reverse
     for i in reversed(range(n)):
-        cumulative_reward = rewards[i] + gamma * cumulative_reward
+        if normalize_reward is True:
+            reward = normalize_reward_func(rewards[i], env_id)
+        else:
+            reward = rewards[i]
+        cumulative_reward = reward + gamma * cumulative_reward
         discounted_rewards[i] = cumulative_reward
     return discounted_rewards
 
 
-def find_step_wise_discounted_rewards_and_statistics(demonstrations_path, gamma=0.99):
+def find_step_wise_discounted_rewards_and_statistics(demonstrations_path, normalize_reward, env_id, gamma=0.99):
     """
     Find the discounted rewards for each step of each episode and compute statistics:
     maximum, minimum, mean, median, 25th quantile, and 75th quantile.
@@ -128,7 +154,7 @@ def find_step_wise_discounted_rewards_and_statistics(demonstrations_path, gamma=
                     rewards = list(data['reward'][episode_key].values())
 
                     all_discounted_rewards[episode_key] = {}
-                    discounted_rewards = calculate_discounted_rewards_per_step(rewards, gamma)
+                    discounted_rewards = calculate_discounted_rewards_per_step(rewards, normalize_reward, env_id, gamma)
                     discounted_rewards_list.extend(discounted_rewards)
 
                     for step_counter in range(discounted_rewards.shape[0]):
@@ -178,9 +204,6 @@ class ExpertDataset(Dataset):
 
         print("\nLoading demonstrations ...")
 
-        # Do some checks
-        assert normalize_rewards is False, 'Discounted rewards are not computed with normalized rewards!'
-
         self.directory = directory
         self.device = device
         self.use_images = use_images
@@ -195,7 +218,12 @@ class ExpertDataset(Dataset):
         self.data_store = {}
 
         # Get discounted rewards
-        self.all_discounted_rewards, *_ = find_step_wise_discounted_rewards_and_statistics(directory, gamma)
+        self.all_discounted_rewards, *_ = find_step_wise_discounted_rewards_and_statistics(
+            directory,
+            self.normalize_rewards,
+            self.env_id,
+            gamma
+        )
 
         # Build an index that maps a flat list index to (filename, episode, step_key)
         for filename in os.listdir(directory):
@@ -251,8 +279,7 @@ class ExpertDataset(Dataset):
 
     def normalize_features_func(self, features):
         if self.normalize_features is True:
-            max_obs, min_obs = min_max_obs_values(self.env_id)
-            features = (features - min_obs) / (max_obs - min_obs + 1e-8)
+            features = normalize_features_func(features, self.env_id)
 
         return features
 
@@ -266,8 +293,7 @@ class ExpertDataset(Dataset):
 
     def normalize_reward_func(self, reward):
         if self.normalize_rewards is True:
-            max_rew, min_rew = min_max_rew_values(self.env_id)
-            reward = (reward - min_rew) / (max_rew - min_rew + 1e-8)
+            reward = normalize_reward_func(reward, self.env_id)
 
         return reward
 
@@ -355,7 +381,7 @@ if __name__ == '__main__':
 
     _demonstrations_path = '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/demonstrations'
 
-    find_step_wise_discounted_rewards_and_statistics(_demonstrations_path)
+    find_step_wise_discounted_rewards_and_statistics(_demonstrations_path, True, "SafetyPointGoal1-v0")
 
     # # Test 'ExpertDataset' class
     # dataset = ExpertDataset(

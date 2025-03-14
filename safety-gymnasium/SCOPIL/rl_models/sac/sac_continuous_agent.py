@@ -312,6 +312,7 @@ class SAC(ABC):
                             self.seventy_five_quant_disc_reward
                         ) = stats_discounted_rew_values(
                             self.config['game']['env_id'],
+                            self.config['Experiment']['normalize_rewards'],
                             self.config['SAC']['expert_dataset_path'],
                             self.gamma
                         )

@@ -1,4 +1,4 @@
-from SCOPIL.algos.sac.sac_continuous_agent import SAC
+from SCOPIL.rl_models.sac.sac_continuous_agent import SAC
 
 import torch as th
 

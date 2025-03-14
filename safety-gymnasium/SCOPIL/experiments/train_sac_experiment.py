@@ -80,7 +80,8 @@ class SACExperiment(TrainExperiment):
                         self.observation,
                         self.next_observation,
                         buffer_action,
-                        self.reward,
+                        # Normalize it here to get the logs with the unnormalized rewards
+                        self.normalize_rewards_func(self.reward),
                         self.fixed_done,
                         self.done,
                         self.truncated,

@@ -9,7 +9,7 @@ import torch as th
 from .base_experiment import BaseExperiment
 from SCOPIL.utils.env_utils import get_cost_sum_from_info_dict, render
 from SCOPIL.utils.exp_utils import test_print_logs
-from SCOPIL.utils.demonstration_utils import min_max_obs_values, min_max_rew_values
+from SCOPIL.utils.demonstration_utils import normalize_features_func, normalize_reward_func
 
 
 class TrainExperiment(BaseExperiment):
@@ -465,7 +465,7 @@ class TrainExperiment(BaseExperiment):
             vision_obs = self.env.render()
             render(vision_obs)
 
-        return self.normalize_features_func(next_obs), self.normalize_rewards_func(reward), cost, done, truncated, info
+        return self.normalize_features_func(next_obs), reward, cost, done, truncated, info
 
     def normalize_features_func(self, obs: np.ndarray) -> np.ndarray:
         """
@@ -475,8 +475,8 @@ class TrainExperiment(BaseExperiment):
         """
         
         if self.normalize_features is True:
-            max_obs, min_obs = min_max_obs_values(self.env.task_id)
-            normalized_obs = (obs - min_obs) / (max_obs - min_obs + 1e-8)  # avoid division by zero
+            normalized_obs = normalize_features_func(obs, self.env.task_id)
+
             return normalized_obs
             
         return obs
@@ -488,8 +488,8 @@ class TrainExperiment(BaseExperiment):
         :return: Normalized reward
         """
         if self.normalize_rewards is True:
-            max_reward, min_reward = min_max_rew_values(self.env.task_id)
-            normalized_reward = (reward - min_reward) / (max_reward - min_reward + 1e-8)  # avoid division by zero
+            normalized_reward = normalize_reward_func(reward, self.env.task_id)
+
             return normalized_reward
 
         return reward

@@ -1,0 +1,75 @@
+game:
+  env_id: "SafetyPointGoal1-v0"
+  with_human: False # One or two humans if True
+  use_image_obs: False
+
+ICRL:
+  layer1_size: 64  # number of neurons in the first hidden layer
+  layer2_size: 64  # number of neurons in the second hidden layer
+  lr: 0.00003  # learning rate of policy, value, and cost networks
+  n_steps: 400  # 2048 # number of steps per episode
+  forward_steps : 2000  # 200000 # number of steps per iteration (iterations = N of Algorithm 1 in ICRL)
+  n_iters: 3  # 30 # number of iterations (N). n_iters*forward_steps gives the total number of steps
+  reward_gamma: 0.99
+  reward_gae_lambda: 0.95
+  reward_vf_coef: 0.5
+  max_grad_norm: 0.5
+  batch_size: 10  # 128
+  epochs: 3  # 20 # number of policy, value, and cost networks updates per episode
+  clip_range: 0.2
+  target_kl: 0.02
+  constraint_net_layer1_size: 40  # 20
+  constraint_net_layer2_size: 40  # None
+  constraint_net_regularizer_coeff: 0.6
+  constraint_net_cn_lr: 0.005
+  constraint_net_anneal_clr_by_factor: 0.9
+  constraint_net_target_kl_old_new: 10
+  constraint_net_target_kl_new_old: 2.5
+  cost_gamma: 0.99
+  cost_gae_lambda: 0.95
+  cost_vf_coef: 0.5
+  lambda_initial_value: 1.0
+  lambda_lr: 0.1
+  alpha_cost: 0.0
+  backward_iterations: 3  # 10
+  backward_n_rollouts: 5  # 45
+  constraint_net_batch_size: None
+
+  # Demonstrations
+  expert_dataset_path: '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/demonstrations'
+  load_demos_in_memory: True
+  smooth_actions: False
+  smooth_factor: 0.99
+
+Experiment:
+
+  # Normalization
+  normalize_features: True
+  normalize_rewards: False
+
+  # Logging
+  test_every_episodes: 2  # 5  # episodes interval between tests
+  log_interval: 2  # 5  # print avg reward in the interval
+
+  # Games/Steps
+  max_timesteps_per_game: 300  # 1000  # max timesteps per episode in train mode
+  test_max_timesteps_per_game: 300  # 1000  # max steps per episode in test mode
+  test_max_games: 5  # 40  # print avg test reward in the interval
+
+  # Saving
+  save_model: True
+  save_data_for_plots: False
+
+  # Testing
+  test_model: False  # if True, no training
+  load_checkpoint: False
+  checkpoint_path: ""
+  checkpoint_prefix: "last"  # Options: "best_reward", "lowest_constr", "last"
+
+  render: False
+  debug_: False
+  test_window_size_moving_avg: 10
+  seed: None  # None or int
+  test_seed: 2024  # None or int
+  device: "cpu"  # "cuda" or "cpu"
+  torch_threads: 1

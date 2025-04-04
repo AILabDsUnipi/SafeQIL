@@ -8,7 +8,7 @@ import torch as th
 
 from .base_experiment import BaseExperiment
 from SCOPIL.utils.env_utils import get_cost_sum_from_info_dict, render
-from SCOPIL.utils.exp_utils import test_print_logs
+from SCOPIL.utils.exp_utils import test_print_logs, print_latest_metrics_from_dict
 from SCOPIL.utils.demonstration_utils import normalize_features_func, normalize_reward_func
 
 
@@ -34,11 +34,11 @@ class TrainExperiment(BaseExperiment):
         self.use_image_obs = self.config['game']['use_image_obs']
         self.render = self.config['Experiment']['render']
 
-        # Initialize lists to keep track of information and variables during training
+        # Initialize lists/dicts/variables to keep track of information during training
         self.episodes_model_saved = {'last': [], 'best_reward': [], 'lowest_constr': []}
         self.test_avg_best_score = -np.inf
         self.test_avg_lowest_num_constr = np.inf
-        self.i_episode = 0
+        self.total_games = 0
         self.game_reward = 0
         self.train_step_counter = 0
         self.done = False
@@ -66,8 +66,10 @@ class TrainExperiment(BaseExperiment):
         self.freq_constraint_violation_per_log_interval = {
             constraint_type: [] for constraint_type in self.constraint_types
         }
+        self.train_logs_dict = {}
+        self.train_logs_avg_per_log_interval_dict = {}
 
-        # Initialize lists to keep track of information and variables during testing
+        # Initialize lists/dicts to keep track of information during testing
         self.test_step_list_avg_per_log_interval = []
         self.test_reward_list_avg_per_log_interval = []
         self.test_num_constraint_violation_per_log_interval = {
@@ -83,15 +85,15 @@ class TrainExperiment(BaseExperiment):
 
     def test_during_training(self):
 
-        if self.i_episode % self.test_every_episodes == 0 or self.i_episode == 1:
+        if self.total_games % self.test_every_episodes == 0 or self.total_games == 1:
 
             self.test_game_number += 1  # keep track of the testing session number
             print('\nTest {}'.format(self.test_game_number) + '\n')
 
             ## Run test
             # Evaluation mode
+            self.eval_mode()
             with th.no_grad():
-                self.eval_mode()
                 # Test
                 self.test_process()
             # Return to train mode
@@ -108,18 +110,18 @@ class TrainExperiment(BaseExperiment):
                         'Saving model... \nHighest reward achieved: ' + str(round(test_avg_reward, 2))
                     )
                     self.save_agent_models('best_reward')
-                    self.episodes_model_saved['best_reward'].append(self.i_episode)
+                    self.episodes_model_saved['best_reward'].append(self.total_games)
                 if test_avg_num_constr < self.test_avg_lowest_num_constr:
                     self.test_avg_lowest_num_constr = test_avg_num_constr
                     print(
                         'Saving model... \nLowest number of constraints achieved: ' + str(round(test_avg_num_constr, 2))
                     )
                     self.save_agent_models('lowest_constr')
-                    self.episodes_model_saved['lowest_constr'].append(self.i_episode)
-                if self.i_episode == 1 or self.i_episode % self.test_every_episodes == 0:
+                    self.episodes_model_saved['lowest_constr'].append(self.total_games)
+                if self.total_games == 1 or self.total_games % self.test_every_episodes == 0:
                     print('Saving last models...')
                     self.save_agent_models('last')
-                    self.episodes_model_saved['last'].append(self.i_episode)
+                    self.episodes_model_saved['last'].append(self.total_games)
 
             # Print the average results of the test
             test_print_logs(
@@ -167,8 +169,7 @@ class TrainExperiment(BaseExperiment):
             test_fixed_done = 0.
 
             # Reset environment. The cost is always 0 after resetting.
-            test_obs, test_info = self.env.reset()
-            test_obs = self.normalize_features_func(test_obs)
+            test_obs, test_info = self.env_reset()
             assert len(test_info) == 0, f"'test_info': {test_info}"
 
             # Start to play a game
@@ -248,6 +249,9 @@ class TrainExperiment(BaseExperiment):
         # Evaluation mode for the agent networks
         self.eval_mode()
 
+        # Keep track of the total games
+        self.total_games += 1
+
         self.game_reward = 0
         self.train_step_counter = 0
         self.done = False
@@ -258,8 +262,7 @@ class TrainExperiment(BaseExperiment):
         }
 
         # Reset environment
-        observation, self.info = self.env.reset()
-        self.observation = self.normalize_features_func(observation)
+        self.observation, self.info = self.env_reset()
         assert len(self.info) == 0, f"'self.info': {self.info}"
 
         if self.debug_:
@@ -282,6 +285,12 @@ class TrainExperiment(BaseExperiment):
         # Ignore the "done" signal if it comes from hitting the time horizon.
         # (https://github.com/openai/spinningup/blob/master/spinup/algos/pytorch/sac/sac.py)
         self.fixed_done = 0. if self.train_step_counter == self.max_timesteps_per_game - 1 else float(self.done)
+
+        # keep track of the overall step number
+        self.total_steps += 1
+
+        # keep track of the step number for each game
+        self.train_step_counter += 1
 
         # Update number of constraint violations
         self.constraint_violation.update({
@@ -319,7 +328,7 @@ class TrainExperiment(BaseExperiment):
         # Update training metrics about the experiment
         self.update_train_metrics()
 
-        if self.i_episode % self.log_interval == 0 or self.i_episode == 1:
+        if self.total_games % self.log_interval == 0 or self.total_games == 1:
 
             # Calculate per_log_interval values
             reward_avg_per_log_interval = mean(self.reward_list[-self.log_interval:])
@@ -353,7 +362,7 @@ class TrainExperiment(BaseExperiment):
                 '##Avg over the last {} games##\n'
                 'Avg steps: {}\n'
                 'Avg per game reward: {}'.format(
-                    self.i_episode,
+                    self.total_games,
                     self.total_steps,
                     self.log_interval,
                     round(steps_avg_per_log_interval, 2),
@@ -434,13 +443,29 @@ class TrainExperiment(BaseExperiment):
                     )
                 )
 
-    @abstractmethod
     def save_agent_models(self, prefix_model_name):
-        raise NotImplementedError
+        """
+        Save the agent models
+        :param prefix_model_name: str, prefix name for the models
+        """
+        self.agent.save(prefix_model_name, self.file_results_dir)
 
     @abstractmethod
     def train_store_and_print_info(self):
         raise NotImplementedError
+
+    def train_logging_per_interval(self):
+        """
+        Calculate and store per_log_interval values
+        """
+        for key, value in self.train_logs_dict.items():
+            if key not in list(self.train_logs_avg_per_log_interval_dict.keys()):
+                self.train_logs_avg_per_log_interval_dict[key] = []
+            if len(value) > 0:
+                self.train_logs_avg_per_log_interval_dict[key].append(np.mean(value[-self.log_interval:]))
+
+        # Print per_log_interval values
+        print_latest_metrics_from_dict(self.train_logs_avg_per_log_interval_dict)
 
     @abstractmethod
     def train_networks(self):
@@ -454,7 +479,7 @@ class TrainExperiment(BaseExperiment):
         """
         Perform an environment step, normalizing obs and rewards before return.
         :param action: Action to perform
-        :return: Next observation, reward, cost, done, info
+        :return: Next observation, reward, cost, done, truncated, info
         """
 
         # Step
@@ -466,6 +491,18 @@ class TrainExperiment(BaseExperiment):
             render(vision_obs)
 
         return self.normalize_features_func(next_obs), reward, cost, done, truncated, info
+
+    def env_reset(self) -> Tuple[np.ndarray, dict]:
+        """
+        Reset environment
+
+        :return: observation, info
+
+        """
+        observation, info = self.env.reset()
+        observation = self.normalize_features_func(observation)
+
+        return observation, info
 
     def normalize_features_func(self, obs: np.ndarray) -> np.ndarray:
         """
@@ -501,7 +538,7 @@ class TrainExperiment(BaseExperiment):
         """
 
         info = {
-            'total_games': self.i_episode,
+            'total_games': self.total_games,
             'total_steps': self.total_steps
         }
 

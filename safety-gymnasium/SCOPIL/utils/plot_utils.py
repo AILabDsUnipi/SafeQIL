@@ -9,12 +9,20 @@ import seaborn as sns
 
 
 def save_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plots=False):
+    """
+    Save the constraint net logs and plot them.
+    :param experiment: The experiment object.
+    :param files_dir: The directory where to save the logs.
+    :param plot_dir: The directory where to save the plots.
+    :param return_data_for_plots: If True, return the data for plotting.
+    :return: None or data for plotting.
+    """
 
     print("\nSaving logs and plots...")
 
     data_for_plots_to_return = {}
 
-    if experiment.only_pretrain is False:
+    if hasattr(experiment, 'only_pretrain') is False or experiment.only_pretrain is False:
 
         # Save test logs in files
         pd.DataFrame(experiment.test_step_list, columns=['Steps']).to_csv(
@@ -101,19 +109,23 @@ def save_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plots=Fa
         train_logs = {
             k: v for k, v in experiment.train_logs_dict.items() if len(v) > 0
         }
-        train_logs_avg_per_log_interval = {
-            k: v for k, v in experiment.train_logs_avg_per_log_interval_dict.items() if len(v) > 0
-        }
+        train_logs_avg_per_log_interval = None
+        if len(experiment.train_logs_avg_per_log_interval_dict) > 0:
+            train_logs_avg_per_log_interval = {
+                k: v for k, v in experiment.train_logs_avg_per_log_interval_dict.items() if len(v) > 0
+            }
         # Create dataframes
         train_logs = pd.DataFrame(train_logs)
-        train_logs_avg_per_log_interval = pd.DataFrame(train_logs_avg_per_log_interval)
+        if len(experiment.train_logs_avg_per_log_interval_dict) > 0:
+            train_logs_avg_per_log_interval = pd.DataFrame(train_logs_avg_per_log_interval)
         # Save to csv
         train_logs.to_csv(
             os.path.join(files_dir, 'train_logs.csv'), index=False
         )
-        train_logs_avg_per_log_interval.to_csv(
-            os.path.join(files_dir, 'train_logs_avg_per_log_interval.csv'), index=False
-        )
+        if len(experiment.train_logs_avg_per_log_interval_dict) > 0:
+            train_logs_avg_per_log_interval.to_csv(
+                os.path.join(files_dir, 'train_logs_avg_per_log_interval.csv'), index=False
+            )
 
         for model_type in experiment.episodes_model_saved:
             pd.DataFrame(
@@ -125,19 +137,21 @@ def save_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plots=Fa
 
         # Check the consistency of the test and train results
         assert len(experiment.test_reward_list_avg_per_log_interval) > 0, "No test results provided."
-        assert len(experiment.reward_list_avg_per_log_interval) == \
-               len(experiment.test_reward_list_avg_per_log_interval) == \
-               len(experiment.step_list_avg_per_log_interval) == \
-               len(experiment.test_step_list_avg_per_log_interval), \
-            "Inconsistency among results concerning the number of test."
+        assert (
+                len(experiment.reward_list_avg_per_log_interval) ==
+                len(experiment.test_reward_list_avg_per_log_interval) ==
+                len(experiment.step_list_avg_per_log_interval) ==
+                len(experiment.test_step_list_avg_per_log_interval)
+        ), "Inconsistency among results concerning the number of test."
         for constraint_type in experiment.test_num_constraint_violation_per_log_interval:
             constraint_name = constraint_type.replace('cost_', '')
-            assert len(experiment.test_reward_list_avg_per_log_interval) == \
-                   len(experiment.num_constraint_violation_per_log_interval[constraint_type]) == \
-                   len(experiment.test_num_constraint_violation_per_log_interval[constraint_type]) == \
-                   len(experiment.freq_constraint_violation_per_log_interval[constraint_type]) == \
-                   len(experiment.test_freq_constraint_violation_per_log_interval[constraint_type]), \
-                f"{constraint_name} constraint results are inconsistent concerning the number of test."
+            assert (
+                    len(experiment.test_reward_list_avg_per_log_interval) ==
+                    len(experiment.num_constraint_violation_per_log_interval[constraint_type]) ==
+                    len(experiment.test_num_constraint_violation_per_log_interval[constraint_type]) ==
+                    len(experiment.freq_constraint_violation_per_log_interval[constraint_type]) ==
+                    len(experiment.test_freq_constraint_violation_per_log_interval[constraint_type])
+            ), f"{constraint_name} constraint results are inconsistent concerning the number of test."
 
         ## Plot metrics for per_log_interval
         # The first element of each tuple is the ylabel,
@@ -195,7 +209,7 @@ def save_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plots=Fa
                     plot_xlabel, plot_ylabel, plot_title, plot_legend, data, x_axis
                 ]
 
-        ## Plot train metrics for per_log_interval and all steps
+        ## Plot train metrics for 'all steps' and 'per_log_interval'
 
         # Plot for all steps.
         # The first element of each tuple is the ylabel,
@@ -203,66 +217,37 @@ def save_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plots=Fa
         # the third is the data to plot, and
         # the forth is the title of the file to be written.
         data_to_plot_train = group_metrics(experiment.train_logs_dict)
-
         x_axis = [(i + 1) for i in range(len(data_to_plot_train[0][2][0]))]
-        for (plot_ylabel, plot_title, data, file_title) in data_to_plot_train:
-            x_label = 'Episodes'
-            plt.figure()
-            plt.xlabel(x_label)
-            plt.ylabel(plot_ylabel)
-            plt.title(plot_title)
-
-            # Plot max and min
-            if len(data) > 1:
-                plt.fill_between(x_axis, data[2], data[1], alpha=0.5)
-
-            # Plot mean
-            plt.plot(x_axis, data[0])
-
-            # Save and close
-            plt.savefig(os.path.join(plot_dir, file_title + "_all_episodes.png"))
-            plt.close()
-
-            if return_data_for_plots is True:
-                data_for_plots_to_return[file_title + "_all_episodes"] = [
-                    x_label, x_axis, plot_ylabel, plot_title, data
-                ]
+        new_data_for_plots_to_return = plot_train_logs(
+            data_to_plot_train,
+            x_axis,
+            per_log_interval=False,
+            plot_dir=plot_dir,
+            return_data_for_plots=return_data_for_plots
+        )
+        data_for_plots_to_return.update(new_data_for_plots_to_return)
 
         # Plot for per_log_interval
-        # The first element of each tuple is the ylabel,
-        # the second is the plot title,
-        # the third is the data to plot, and
-        # the forth is the title of the file to be written.
-        data_to_plot_train_per_log_interval = group_metrics(experiment.train_logs_avg_per_log_interval_dict)
+        if len(experiment.train_logs_avg_per_log_interval_dict) > 0:
+            # The first element of each tuple is the ylabel,
+            # the second is the plot title,
+            # the third is the data to plot, and
+            # the forth is the title of the file to be written.
+            data_to_plot_train_per_log_interval = group_metrics(experiment.train_logs_avg_per_log_interval_dict)
+            x_axis = [
+                ((i + 1) * experiment.log_interval) if i > 0 else 1
+                for i in range(len(data_to_plot_train_per_log_interval[0][2][0]))
+            ]
+            new_data_for_plots_to_return = plot_train_logs(
+                data_to_plot_train_per_log_interval,
+                x_axis,
+                per_log_interval=True,
+                plot_dir=plot_dir,
+                return_data_for_plots=return_data_for_plots
+            )
+            data_for_plots_to_return.update(new_data_for_plots_to_return)
 
-        x_axis = [
-            ((i + 1) * experiment.log_interval) if i > 0 else 1
-            for i in range(len(data_to_plot_train_per_log_interval[0][2][0]))
-        ]
-        for (plot_ylabel, plot_title, data, file_title) in data_to_plot_train_per_log_interval:
-            x_label = 'Episodes'
-            plt.figure()
-            plt.xlabel(x_label)
-            plt.ylabel(plot_ylabel)
-            plt.title(plot_title)
-
-            # Plot max and min
-            if len(data) > 1:
-                plt.fill_between(x_axis, data[2], data[1], alpha=0.5)
-
-            # Plot mean
-            plt.plot(x_axis, data[0])
-
-            # Save and close
-            plt.savefig(os.path.join(plot_dir, file_title + "_per_log_interval.png"))
-            plt.close()
-
-            if return_data_for_plots is True:
-                data_for_plots_to_return[file_title + "_per_log_interval"] = [
-                    x_label, x_axis, plot_ylabel, plot_title, data
-                ]
-
-    if experiment.pretrain is True:
+    if hasattr(experiment, 'pretrain') is True and experiment.pretrain is True:
 
         ## Save pre-train logs
         # Remove items where the list is empty
@@ -303,6 +288,45 @@ def save_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plots=Fa
                 ]
 
     print(f"Logs and plots saved in '{files_dir}' and '{plot_dir}' successfully!")
+
+    return data_for_plots_to_return
+
+
+def plot_train_logs(data_to_plot, x_axis, per_log_interval, plot_dir, return_data_for_plots=False):
+    """
+    Plot the train logs.
+    :param data_to_plot: The data to plot.
+    :param x_axis: The x-axis values.
+    :param per_log_interval: If True, plot per log interval.
+    :param plot_dir: The directory where to save the plots.
+    :param return_data_for_plots: If True, return the data for plotting.
+    :return: None or data for plotting.
+    """
+
+    file_title_suffix = "_per_log_interval" if per_log_interval else "_all_episodes"
+    data_for_plots_to_return = {}
+    for (plot_ylabel, plot_title, data, file_title) in data_to_plot:
+        x_label = 'Episodes'
+        plt.figure()
+        plt.xlabel(x_label)
+        plt.ylabel(plot_ylabel)
+        plt.title(plot_title)
+
+        # Plot max and min
+        if len(data) > 1:
+            plt.fill_between(x_axis, data[2], data[1], alpha=0.5)
+
+        # Plot mean
+        plt.plot(x_axis, data[0])
+
+        # Save and close
+        plt.savefig(os.path.join(plot_dir, file_title + file_title_suffix + ".png"))
+        plt.close()
+
+        if return_data_for_plots is True:
+            data_for_plots_to_return[file_title + file_title_suffix] = [
+                x_label, x_axis, plot_ylabel, plot_title, data
+            ]
 
     return data_for_plots_to_return
 
@@ -390,14 +414,16 @@ def save_test_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plo
 
     # Check the consistency of the test results
     assert len(experiment.test_reward_list) > 0, "No test results provided."
-    assert len(experiment.test_reward_list) == \
-           len(experiment.test_step_list), "Inconsistency among results concerning the number of test."
+    assert (
+            len(experiment.test_reward_list) == len(experiment.test_step_list)
+    ), "Inconsistency among results concerning the number of test."
     for constraint_type in experiment.test_num_constraint_violation_list:
         constraint_name = constraint_type.replace('cost_', '')
-        assert len(experiment.test_reward_list) == \
-               len(experiment.test_num_constraint_violation_list[constraint_type]) == \
-               len(experiment.test_freq_constraint_violation_list[constraint_type]), \
-               f"{constraint_name} constraint results are inconsistent concerning the number of test."
+        assert (
+                len(experiment.test_reward_list) ==
+                len(experiment.test_num_constraint_violation_list[constraint_type]) ==
+                len(experiment.test_freq_constraint_violation_list[constraint_type])
+        ), f"{constraint_name} constraint results are inconsistent concerning the number of test."
 
     single_test = len(experiment.test_reward_list) == 1
 
@@ -412,10 +438,14 @@ def save_test_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plo
         for constraint_type in experiment.constraint_types:
             constraint_name = constraint_type.replace('cost_', '')
             data_to_write += [
-                (experiment.test_num_constraint_violation_list[constraint_type],
-                 f"Number of '{constraint_name}' constraint violations"),
-                (experiment.test_freq_constraint_violation_list[constraint_type],
-                 f"Frequency of '{constraint_name}' constraint violations")
+                (
+                    experiment.test_num_constraint_violation_list[constraint_type],
+                    f"Number of '{constraint_name}' constraint violations"
+                ),
+                (
+                    experiment.test_freq_constraint_violation_list[constraint_type],
+                    f"Frequency of '{constraint_name}' constraint violations"
+                )
             ]
         for (data, type_of_data) in data_to_write:
             stats_info.write(
@@ -453,7 +483,8 @@ def save_test_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plo
                     'Frequency of Violations',
                     f"Frequency of '{constraint_name}' constraint violations",
                     experiment.test_freq_constraint_violation_list[constraint_type],
-                    f'{constraint_name}_freq_constraint_violations')
+                    f'{constraint_name}_freq_constraint_violations'
+                )
             ]
 
         plot_xlabel = 'Episodes'

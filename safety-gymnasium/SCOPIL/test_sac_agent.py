@@ -15,7 +15,7 @@ from experiments.test_experiment import TestExperiment
 from utils.file_utils import get_config, get_result_dirs
 from utils.agent_utils import get_sac_agent
 from utils.plot_utils import save_test_logs_and_plot
-from utils.exp_utils import get_seed
+from utils.exp_utils import get_test_seed
 
 
 def main(argv):
@@ -36,13 +36,13 @@ def main(argv):
     )
 
     # Get seed
-    seed = get_seed(config)
+    seed = get_test_seed(config)
 
     # Create the directories for files and plots of this experiment
-    files_dir, plot_dir = get_result_dirs(argv[1], argv[0])
+    files_dir, plot_dir, exp_id = get_result_dirs(argv[1], argv[0], test_only=True, seed=seed)
 
     # Create the SAC agent
-    sac_agent = get_sac_agent(config, env, files_dir, only_test=True, seed=seed)
+    sac_agent = get_sac_agent(config, env, only_test=True, seed=seed)
 
     # Create the experiment
     experiment = TestExperiment(env, sac_agent, config, files_dir, seed)

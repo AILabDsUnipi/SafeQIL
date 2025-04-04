@@ -1,16 +1,16 @@
 game:
   env_id: "SafetyPointGoal1-v0"
-  with_human: False # One or two humans if True
+  with_human: False  # One or two humans if True
   use_image_obs: False
 
 SAC:
   layer1_size: 32  # number of neurons in the first hidden layer
-  layer2_size: 32 # number of neurons in the second hidden layer
+  layer2_size: 32  # number of neurons in the second hidden layer
   log_std_init: -3.0
   batch_size: 256
   gamma: 0.99
   tau: 0.005  # factor for polyak update of target networks
-  alpha: 0.0003 # actor lr
+  alpha: 0.0003  # actor lr
   beta: 0.0003  # critic lr
   target_entropy: "auto"  # "auto", "auto_<float>", or float. In continuous case, there is no 'target_entropy_ratio', as opposed to 0.4 in discrete case.
   entropy_coefficient_lr: 0.0003  # In continuous case, the same lr with the networks is suggested, as opposed to 0.002 in discrete case.
@@ -19,7 +19,7 @@ SAC:
   sde_sample_freq: -1
   use_sde_at_warmup: False
   start_steps: 300  # 10000 # how many steps to collect transitions before learning starts
-  num_steps: 4000 # 1000000 # Total environment steps. 'None' or integer. If 'None', specify 'n_episodes' or 'n_train_episodes'.
+  num_steps: 4000  # 1000000 # Total environment steps. 'None' or integer. If 'None', specify 'n_episodes' or 'n_train_episodes'.
   buffer_memory_size: 1000000
   update_every_steps: 1  # Steps interval between two consecutive NN updates
   gradient_steps: 1  # How many steps to perform when updating
@@ -90,7 +90,7 @@ Experiment:
 
   # Normalization
   normalize_features: True
-  normalize_rewards: True
+  normalize_rewards: False
 
   # Logging
   test_every_episodes: 2 # 5  # episodes interval between tests
@@ -99,7 +99,7 @@ Experiment:
   # Games/Steps
   max_timesteps_per_game: 1000  # max timesteps per episode in train mode
   test_max_timesteps_per_game: 1000  # max steps per episode in test mode
-  test_max_games: 40 # 5  # print avg test reward in the interval
+  test_max_games: 5  # 40  # print avg test reward in the interval
 
   # Saving
   save_model: True
@@ -108,13 +108,14 @@ Experiment:
   # Testing
   test_model: False # if True, no training
   load_checkpoint: False
-  checkpoint_path: "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/results_/sac_w_all_and_w_dac_reg_dac_coef=0.005_w_discr_rew_w_entr_in_ood_rl_term_results/tmp/sac_single_agent_exp_sac_w_all_and_w_dac_reg_dac_coef=0.005_w_disc_rew_w_entr_in_ood_rl_term_results_1/chkpts"
+  checkpoint_path: ""
   checkpoint_prefix: "last"  # Options: "best_reward", "lowest_constr", "last"
 
   render: False
   debug_: False
   test_window_size_moving_avg: 10
-  seed: 2024  # None # 2024  # None or int
+  seed: None  # None or int
+  test_seed: 2024  # None or int
   device: "cpu"  # "cuda" or "cpu"
   torch_threads: 1
 

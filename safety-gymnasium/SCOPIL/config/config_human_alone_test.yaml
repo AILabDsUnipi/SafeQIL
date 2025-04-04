@@ -20,6 +20,6 @@ Experiment:
 
   test_model: True # Dummy, just for triggering the right mode
   with_human: True # Human alone, or two humans
-  seed: None  # None or int
+  test_seed: None  # None or int
   debug_: False
   test_window_size_moving_avg: 10

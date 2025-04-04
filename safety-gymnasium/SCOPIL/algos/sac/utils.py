@@ -2,7 +2,6 @@
 
 import warnings
 from typing import Dict, Union, Any, Iterable, List
-import random
 import functools
 from itertools import zip_longest
 
@@ -90,26 +89,6 @@ def recursive_getattr(obj: Any, attr: str, *args) -> Any:
         return getattr(_obj, _attr, *args)
 
     return functools.reduce(_getattr, [obj, *attr.split(".")])
-
-
-def set_random_seed(seed: int, using_cuda: bool = False) -> None:
-    """
-    Seed the different random generators.
-
-    :param seed:
-    :param using_cuda:
-    """
-    # Seed python RNG
-    random.seed(seed)
-    # Seed numpy RNG
-    np.random.seed(seed)
-    # seed the RNG for all devices (both CPU and CUDA)
-    th.manual_seed(seed)
-
-    if using_cuda:
-        # Deterministic operations for CuDNN, it may impact performances
-        th.backends.cudnn.deterministic = True
-        th.backends.cudnn.benchmark = False
 
 
 def obs_as_tensor(obs: Union[np.ndarray, Dict[str, np.ndarray]], device: th.device) -> Union[th.Tensor, TensorDict]:

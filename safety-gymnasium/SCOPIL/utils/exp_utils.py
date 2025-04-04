@@ -1,14 +1,57 @@
 import os
 import pickle
+import random
 
 import cv2
 import numpy as np
+import torch as th
 
 
-def get_seed(config):
+def set_random_seed(seed: int, using_cuda: bool = False) -> None:
+    """
+    Seed the different random generators.
+
+    :param seed:
+    :param using_cuda:
+    """
+    # Seed python RNG
+    random.seed(seed)
+    # Seed numpy RNG
+    np.random.seed(seed)
+    # seed the RNG for all devices (both CPU and CUDA)
+    th.manual_seed(seed)
+
+    if using_cuda:
+        # Deterministic operations for CuDNN, it may impact performances
+        th.backends.cudnn.deterministic = True
+        th.backends.cudnn.benchmark = False
+
+
+def print_latest_metrics_from_dict(metrics_dict: dict):
+    print()  # just for printing an empty line
+    for key, value in metrics_dict.items():
+        if len(value) == 0:
+            continue  # Ignore empty logs
+        print(
+            "Avg {}: {}".format(
+                key,
+                round(float(value[-1]), 2)
+            )
+        )
+    print()  # just for printing another empty line
+
+
+def get_train_seed(config):
     seed = config['Experiment']['seed']
     if seed == 'None':
         seed = int(np.random.randint(2 ** 32, dtype='int64'))
+
+    return seed
+
+
+def get_test_seed(config):
+    seed = config['Experiment']['test_seed']
+    assert isinstance(seed, int)
 
     return seed
 

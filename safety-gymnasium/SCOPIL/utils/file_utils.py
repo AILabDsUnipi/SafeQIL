@@ -28,19 +28,27 @@ def write_config(dict_data, config_path):
         print('Error writing the config file. Cannot find the specified path: {}'.format(config_path))
 
 
-def get_result_dirs(exp_id, config_file_name):
+def get_result_dirs(exp_id, config_file_name, test_only=False, seed=None, provided_exp_id=None):
 
-    i = 1
-    while os.path.exists(exp_id + '_' + str(i)):
-        i += 1
-    exp_id = exp_id + '_' + str(i)
+    if test_only:
+        assert seed is not None, "Seed must be provided for testing"
 
-    files_dir = os.path.join(exp_id, 'tmp')
+    intermediate_folder_name = 'train_results' if not test_only else f'test_results_seed={seed}'
+
+    if provided_exp_id is None:
+        i = 1
+        while os.path.exists(exp_id + '_' + str(i)):
+            i += 1
+        exp_id = exp_id + '_' + str(i)
+    else:
+        exp_id = provided_exp_id
+
+    files_dir = os.path.join(exp_id, intermediate_folder_name, 'tmp')
     os.makedirs(files_dir)
 
-    plot_dir = os.path.join(exp_id, 'plots')
+    plot_dir = os.path.join(exp_id, intermediate_folder_name, 'plots')
     os.makedirs(plot_dir)
 
     shutil.copy(config_file_name, files_dir)
 
-    return files_dir, plot_dir
+    return files_dir, plot_dir, exp_id

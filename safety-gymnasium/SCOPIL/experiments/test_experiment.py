@@ -24,6 +24,8 @@ class TestExperiment(BaseExperiment):
         # Define the type of algorithm
         if 'SAC' in list(config.items())[1]:
             self.algo = 'SAC'
+        elif 'ICRL' in list(config.items())[1]:
+            self.algo = 'ICRL'
         else:
             raise ValueError("There is no valid algorithm provided!")
 
@@ -194,7 +196,9 @@ class TestExperiment(BaseExperiment):
             )
 
     def load_agent_models(self):
+        print()  # Just for letting an empty line before the message of loading
         self.agent.load(prefix=self.checkpoint_prefix, path=self.checkpoint_path)
+        print()  # Just for letting an empty line after the message of loading
 
     def normalize_features_func(self, obs: np.ndarray) -> np.ndarray:
         """

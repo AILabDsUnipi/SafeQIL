@@ -33,9 +33,7 @@ class SACExperiment(TrainExperiment):
 
         # Initialize lists to keep track of information and variables during training
         self.i_train_episode = 0
-        self.train_logs_dict = {}
         self.train_logs_cur_game_dict = {}
-        self.train_logs_avg_per_log_interval_dict = {}
         if self.pretrain is True:
             self.pretrain_logs_dict = {}
 
@@ -54,12 +52,12 @@ class SACExperiment(TrainExperiment):
                 return
 
         # RL training Loop
-        for self.i_episode in itertools.count(1):
+        while True:
 
             # At the beginning of each episode, initialize the environment and the variables
             self.initialize_game_var_train()
 
-            print("\nEpisode: " + str(self.i_episode))
+            print("\nEpisode: " + str(self.total_games))
 
             # Start the episode
             while not self.done:
@@ -154,12 +152,6 @@ class SACExperiment(TrainExperiment):
 
         super().train_update_per_step_vars()
 
-        # keep track of the overall step number
-        self.total_steps += 1
-
-        # keep track of the step number for each game
-        self.train_step_counter += 1
-
         # Sample a new noise matrix if needed
         if self.use_sde and self.sde_sample_freq > 0 and self.train_step_counter % self.sde_sample_freq == 0:
             self.agent.actor.reset_noise(1)
@@ -212,35 +204,25 @@ class SACExperiment(TrainExperiment):
         ## logging per interval
         if (
                 self.total_steps >= self.start_steps and
-                (self.i_episode % self.log_interval == 0 or self.i_episode == 1)
+                (self.total_games % self.log_interval == 0 or self.total_games == 1)
         ):
 
             # Calculate and store per_log_interval values
-            for key, value in self.train_logs_dict.items():
-                if key not in list(self.train_logs_avg_per_log_interval_dict.keys()):
-                    self.train_logs_avg_per_log_interval_dict[key] = []
-                if len(value) > 0:
-                    self.train_logs_avg_per_log_interval_dict[key].append(np.mean(value[-self.log_interval:]))
-
-            # Print per_log_interval values
-            print()  # just for printing an empty line
-            for key, value in self.train_logs_avg_per_log_interval_dict.items():
-                if len(value) == 0:
-                    continue  # Ignore empty logs
-                print(
-                    "Avg {}: {}".format(
-                        key,
-                        round(float(value[-1]), 2)
-                    )
-                )
-            print()  # just for printing another empty line
+            self.train_logging_per_interval()
 
         if self.debug_:
             # TODO: Print useful information
             pass
 
     def train_networks(self):
+        # Set train mode
+        self.train_mode()
+
+        # Train
         training_returns = self.agent.train()
+
+        # Go back to eval mode
+        self.eval_mode()
 
         return training_returns
 
@@ -252,10 +234,3 @@ class SACExperiment(TrainExperiment):
         """
 
         return self.agent.predict(obs, deterministic=True)
-
-    def save_agent_models(self, prefix_model_name):
-        """
-        Save the agent models
-        :param prefix_model_name: str, prefix name for the models
-        """
-        self.agent.save(prefix_model_name, self.file_results_dir)

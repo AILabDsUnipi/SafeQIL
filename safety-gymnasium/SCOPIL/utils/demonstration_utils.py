@@ -376,24 +376,41 @@ class ExpertDataset(Dataset):
             th.from_numpy(next_observations).to(th.float32).to(self.device),
         )
 
+    def get_all_actions_and_observations(self):
+        all_actions = []
+        all_observations = []
+
+        for idx in range(len(self)):
+            actions, observations, _, _, _, _, _ = self[idx]
+
+            # Convert tensors to numpy arrays and append
+            all_actions.append(actions.cpu().numpy())
+            all_observations.append(observations.cpu().numpy())
+
+        # Stack arrays into single numpy arrays
+        all_actions = np.stack(all_actions)
+        all_observations = np.stack(all_observations)
+
+        return all_actions, all_observations
+
 
 if __name__ == '__main__':
 
     _demonstrations_path = '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/demonstrations'
 
-    find_step_wise_discounted_rewards_and_statistics(_demonstrations_path, True, "SafetyPointGoal1-v0")
+    # find_step_wise_discounted_rewards_and_statistics(_demonstrations_path, True, "SafetyPointGoal1-v0")
 
     # # Test 'ExpertDataset' class
-    # dataset = ExpertDataset(
-    #     _demonstrations_path,
-    #     use_images=False,
-    #     load_to_memory=True,
-    #     env_id="SafetyPointGoal1-v0",
-    #     normalize_features=True,
-    #     smooth_actions=False,
-    #     smooth_factor=0.9,
-    #     gamma=0.99
-    # )
+    dataset = ExpertDataset(
+        _demonstrations_path,
+        use_images=False,
+        load_to_memory=True,
+        env_id="SafetyPointGoal1-v0",
+        normalize_features=True,
+        smooth_actions=False,
+        smooth_factor=0.9,
+        gamma=0.99
+    )
     # loader = th.utils.data.DataLoader(dataset, batch_size=10, shuffle=True)
     #
     # import time
@@ -411,3 +428,8 @@ if __name__ == '__main__':
     #     total_time = end_time - start_time
     #     print("total time: ", total_time)
     #     exit(0)
+
+    # Test 'get_all_actions_and_observations' function
+    _all_actions, _all_observations = dataset.get_all_actions_and_observations()
+    print("actions: ", _all_actions)
+    print("observations: ", _all_observations)

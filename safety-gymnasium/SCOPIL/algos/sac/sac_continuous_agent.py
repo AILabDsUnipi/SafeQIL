@@ -17,13 +17,13 @@ from .discriminator import Discriminator
 from .networks_continuous import Actor, CnnPolicy, MlpPolicy, SACPolicy, ContinuousCritic
 from .utils import (
     get_device,
-    set_random_seed,
     recursive_getattr,
     get_parameters_by_name,
     polyak_update
 )
 from SCOPIL.utils.demonstration_utils import ExpertDataset, stats_discounted_rew_values
 from SCOPIL.utils.torch_utils import ExpectileLoss
+from SCOPIL.utils.exp_utils import set_random_seed
 
 SelfSAC = TypeVar("SelfSAC", bound="SAC")
 
@@ -60,14 +60,11 @@ class SAC(ABC):
             use_image_obs: bool = False,
             device: Union[th.device, str] = "auto",
             only_test: bool = False,
-            chkpt_dir: bool = None,
             seed: Optional[int] = None
     ):
-
         self.config = config
         self.device = get_device(device)
         self.only_test = only_test
-        self.chkpt_dir = chkpt_dir
         self.seed = seed
 
         ## Hyperparameters, variables and optimizers

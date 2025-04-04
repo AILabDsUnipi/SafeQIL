@@ -9,10 +9,11 @@ from datetime import timedelta
 import safety_gymnasium
 
 # Experiment
-from experiments.human_experiment import HumanExperiment as Experiment
+from experiments.test_experiment import TestExperiment
 
 # Utils
 from utils.file_utils import get_config, get_result_dirs
+from utils.agent_utils import get_icrl_agent
 from utils.plot_utils import save_test_logs_and_plot
 from utils.exp_utils import get_test_seed
 
@@ -24,30 +25,31 @@ def main(argv):
 
     # Check if the selected config file is suitable for the current experiment
     assert config["Experiment"]["test_model"] is True
-    assert config["Experiment"]["with_human"] is True
-    assert config["Experiment"]["render_mode"] == "human", "When human plays, the 'render_mode' should be 'human' !"
-    assert config["Experiment"]["render"] is True
+    assert config["game"]["with_human"] is False
+    assert config["Experiment"]["save_model"] is False
 
-    # creating environment
+    # Create the environment
     env = safety_gymnasium.make(
         config["game"]["env_id"],
-        render_mode=config["Experiment"]["render_mode"],
-        max_episode_steps=config["Experiment"]["test_max_timesteps_per_game"],
-        debug_action_smooth=config["Experiment"]["debug_action_smooth"],
+        render_mode="rgb_array",
+        max_episode_steps=config["Experiment"]["max_timesteps_per_game"]
     )
 
     # Get seed
     seed = get_test_seed(config)
 
     # Create the directories for files and plots of this experiment
-    files_dir, plot_dir = get_result_dirs(argv[1], argv[0])
+    files_dir, plot_dir, exp_id = get_result_dirs(argv[1], argv[0], test_only=True, seed=seed)
+
+    # Create the ICRL agent
+    icrl_agent = get_icrl_agent(config, env, only_test=True, seed=seed)
 
     # Create the experiment
-    experiment = Experiment(env, None, config=config, file_results_dir=files_dir, seed=seed)
+    experiment = TestExperiment(env, icrl_agent, config, files_dir, seed)
 
     # Run the experiment and time it
     start_experiment = time.time()
-    experiment.human_alone_test()
+    experiment.agent_test()
     end_experiment = time.time()
     experiment_duration = timedelta(seconds=end_experiment - start_experiment)
     print('\nTotal Experiment time: {}'.format(experiment_duration))

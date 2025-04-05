@@ -7,7 +7,7 @@ ICRL:
   layer1_size: 64  # number of neurons in the first hidden layer
   layer2_size: 64  # number of neurons in the second hidden layer
   lr: 0.00003  # learning rate of policy, value, and cost networks
-  n_steps: 400  # 2048 # number of steps per episode
+  n_steps: 400  # 2000 # number of steps per episode
   forward_steps : 2000  # 200000 # number of steps per iteration (iterations = N of Algorithm 1 in ICRL)
   n_iters: 3  # 30 # number of iterations (N). n_iters*forward_steps gives the total number of steps
   reward_gamma: 0.99

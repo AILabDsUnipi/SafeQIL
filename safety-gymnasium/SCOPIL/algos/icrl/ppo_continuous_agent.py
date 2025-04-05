@@ -310,7 +310,8 @@ class ContinuousPPOAgent(object):
         assert y_true.ndim == 1 and y_pred.ndim == 1
 
         var_y = np.var(y_true)
-        return np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
+        eps = 1e-05  # To avoid division by zero
+        return 1 - np.var(y_true - y_pred) / (var_y + eps)
 
     def save_models(self, prefix_model_name, path):
 

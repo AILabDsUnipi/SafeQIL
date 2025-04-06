@@ -6,7 +6,7 @@ import numpy as np
 from SCOPIL.utils.env_utils import get_cost_sum_from_info_dict, render
 from .base_experiment import BaseExperiment
 from SCOPIL.utils.demonstration_utils import min_max_obs_values, min_max_rew_values
-from SCOPIL.utils.exp_utils import test_print_logs, save_demonstrations
+from SCOPIL.utils.exp_utils import test_print_logs, save_demonstrations, is_render_capable
 
 
 class TestExperiment(BaseExperiment):

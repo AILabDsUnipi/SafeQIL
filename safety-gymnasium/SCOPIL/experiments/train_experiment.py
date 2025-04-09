@@ -1,5 +1,4 @@
 from abc import abstractmethod
-import csv
 from statistics import mean
 from typing import Tuple
 
@@ -10,6 +9,7 @@ from .base_experiment import BaseExperiment
 from SCOPIL.utils.env_utils import get_cost_sum_from_info_dict, render
 from SCOPIL.utils.exp_utils import test_print_logs, print_latest_metrics_from_dict
 from SCOPIL.utils.demonstration_utils import normalize_features_func, normalize_reward_func
+from SCOPIL.utils.file_utils import write_info_file
 
 
 class TrainExperiment(BaseExperiment):
@@ -541,7 +541,4 @@ class TrainExperiment(BaseExperiment):
             'total_games': self.total_games,
             'total_steps': self.total_steps
         }
-
-        w = csv.writer(open(chkpt_dir + '/rest_info.csv', "w"))
-        for key, val in info.items():
-            w.writerow([key, val])
+        write_info_file(info, 'rest_info', chkpt_dir)

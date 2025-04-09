@@ -6,7 +6,8 @@ import numpy as np
 from SCOPIL.utils.env_utils import get_cost_sum_from_info_dict, render
 from .base_experiment import BaseExperiment
 from SCOPIL.utils.demonstration_utils import min_max_obs_values, min_max_rew_values
-from SCOPIL.utils.exp_utils import test_print_logs, save_demonstrations, is_render_capable
+from SCOPIL.utils.exp_utils import test_print_logs, save_demonstrations
+from SCOPIL.utils.file_utils import write_info_file
 
 
 class TestExperiment(BaseExperiment):
@@ -245,7 +246,4 @@ class TestExperiment(BaseExperiment):
             'total_games': self.test_max_games,
             'total_steps': self.total_steps
         }
-
-        w = csv.writer(open(chkpt_dir + '/rest_info.csv', "w"))
-        for key, val in info.items():
-            w.writerow([key, val])
+        write_info_file(info, 'rest_info', chkpt_dir)

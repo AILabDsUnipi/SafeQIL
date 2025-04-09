@@ -3,6 +3,7 @@ import csv
 
 from SCOPIL.utils.env_utils import get_cost_sum_from_info_dict, close_env_debug_mode
 from SCOPIL.utils.exp_utils import test_print_logs, save_demonstrations
+from SCOPIL.utils.file_utils import write_info_file
 from .base_experiment import BaseExperiment
 
 
@@ -234,8 +235,4 @@ class HumanExperiment(BaseExperiment):
             'total_games': self.test_max_games,
             'total_steps': self.total_steps
         }
-
-        w = csv.writer(open(chkpt_dir + '/rest_info.csv', "w"))
-        for key, val in info.items():
-            w.writerow([key, val])
-
+        write_info_file(info, 'rest_info', chkpt_dir)

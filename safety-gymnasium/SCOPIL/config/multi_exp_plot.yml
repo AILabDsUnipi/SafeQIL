@@ -1,0 +1,27 @@
+# ICRL
+log_dirs: [
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.0",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.1",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.2",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.3",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.4",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.5",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.6",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.7",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.8"
+]
+
+legends: [
+  "reg-coef=0.0",
+  "reg-coef=0.1",
+  "reg-coef=0.2",
+  "reg-coef=0.3",
+  "reg-coef=0.4",
+  "reg-coef=0.5",
+  "reg-coef=0.6",
+  "reg-coef=0.7",
+  "reg-coef=0.8"
+]
+
+test_seed: "2024"
+save_dir: "./icrl_multi_exp_results"

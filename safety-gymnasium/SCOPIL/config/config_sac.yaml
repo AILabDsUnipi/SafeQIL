@@ -65,7 +65,9 @@ SAC:
   w_discriminator_icrl_regularization: False
   discriminator_icrl_regularization_coef: 0.5
   w_discriminator_dac_regularization: True
-  discriminator_dac_regularization_coef: 10.0
+  discriminator_dac_regularization_coef: 0.005
+  w_threshold_in_discriminator_weights: True
+  threshold_in_discriminator_weights: 0.5
   w_demonstrations_rl_term: True
   demonstrations_rl_term_coef: 1.0
   w_demonstrations_next_actions_in_demonstrations_rl_term: False
@@ -76,7 +78,7 @@ SAC:
   w_discriminator_rewards_in_ood_rl_term: True
   discriminator_reward_function_in_ood_rl_term: 'GAIL'  # Options: 'GAIL' (survival bonus), 'saturing_GANs_loss' (per step penalty), 'AIRL' (positive and negative components). From DAC: https://arxiv.org/pdf/1809.02925
   w_discriminator_discounted_rewards_in_ood_rl_term: False
-  w_entropy_in_ood_rl_term: False
+  w_entropy_in_ood_rl_term: True
   w_gail_sac: False  # Pure GAIL without all the rest terms.
   discriminator_reward_function_in_gail_sac: 'GAIL'  # Options: 'GAIL' (survival bonus), 'saturing_GANs_loss' (per step penalty), 'AIRL' (positive and negative components). From DAC: https://arxiv.org/pdf/1809.02925
 

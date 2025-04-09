@@ -115,6 +115,8 @@ class SAC(ABC):
             self.w_compute_analytically_min_dem_q_value: bool = self.config['SAC']['w_compute_analytically_min_dem_q_value']
             self.dem_q_value_stat: str = self.config['SAC']['dem_q_value_stat']
             self.w_discriminator: bool = self.config['SAC']['w_discriminator']
+            self.w_threshold_in_discriminator_weights: bool = self.config['SAC']['w_threshold_in_discriminator_weights']
+            self.threshold_in_discriminator_weights: float = self.config['SAC']['threshold_in_discriminator_weights']
             self.w_demonstrations_rl_term: bool = self.config['SAC']['w_demonstrations_rl_term']
             self.demonstrations_rl_term_coef: float = self.config['SAC']['demonstrations_rl_term_coef']
             self.w_demonstrations_next_actions_in_demonstrations_rl_term: bool = self.config['SAC']['w_demonstrations_next_actions_in_demonstrations_rl_term']
@@ -524,7 +526,6 @@ class SAC(ABC):
                 ## add reward or Discriminator's estimates
                 if self.w_gail_sac is True:
                     # Add the Discriminator's estimates as reward signal
-                    discr_rew = None
                     if self.discriminator_reward_function_in_gail_sac == 'GAIL':
                         discr_rew = -torch.log(1 - critic_loss_weights)
                     elif self.discriminator_reward_function_in_gail_sac == 'saturing_GANs_loss':
@@ -561,10 +562,14 @@ class SAC(ABC):
             max_cur_qvals.append(min_current_q_values.max().item())
 
             ## Compute critic loss
+            # Compute the critic loss coefficient
+            critic_loss_coef = critic_loss_weights
+            if self.w_threshold_in_discriminator_weights is True:
+                critic_loss_coef = (critic_loss_weights >= self.threshold_in_discriminator_weights).float()
             # SAC critic loss
             critic_loss = 0.5 * sum(
                 th.mean(
-                    th.pow(current_q - target_q_values, 2) * critic_loss_weights
+                    th.pow(current_q - target_q_values, 2) * critic_loss_coef
                 ) for current_q in current_q_values
             )
             assert isinstance(critic_loss, th.Tensor)  # for type checker
@@ -1099,6 +1104,13 @@ class SAC(ABC):
         rollout_dones = rollout_data[2]
         rollout_rewards = rollout_data[3]
 
+        # Compute the coefficient of the critic loss
+        critic_loss_coef = 1.
+        if self.w_discriminator is True:
+            critic_loss_coef = 1. - discriminator_rollout_preds
+            if self.w_threshold_in_discriminator_weights is True:
+                critic_loss_coef = (discriminator_rollout_preds < self.threshold_in_discriminator_weights).float()
+
         ## Compute the constraint critic loss and the corresponding TD term
         # Get the specified Q-value statistic of the demonstrated state-action pairs
         # to use it as the target (without grads)
@@ -1151,7 +1163,7 @@ class SAC(ABC):
                 th.mean(
                     self.expectile_loss(
                         rollout_q, dem_q_value_stat
-                    ) * (1. if self.w_discriminator is False else (1. - discriminator_rollout_preds))
+                    ) * critic_loss_coef
                 ) for rollout_q in rollout_q_values
             )
         else:
@@ -1160,7 +1172,7 @@ class SAC(ABC):
                     th.pow(
                         (th.maximum(rollout_q, dem_q_value_stat) if self.w_max_min is True else rollout_q) - dem_q_value_stat,
                         2
-                    ) * (1. if self.w_discriminator is False else (1. - discriminator_rollout_preds))
+                    ) * critic_loss_coef
                 ) for rollout_q in rollout_q_values
             )
         ## TD term
@@ -1189,7 +1201,7 @@ class SAC(ABC):
                 th.pow(
                     rollout_q - target_rollout_q_values,
                     2
-                ) * (1. if self.w_discriminator is False else (1. - discriminator_rollout_preds))
+                ) * critic_loss_coef
             ) for rollout_q in rollout_q_values
         )
 
@@ -1220,8 +1232,6 @@ class SAC(ABC):
             else:
                 ## Compute the targets
                 with th.no_grad():
-                    dem_rl_term_next_actions = None
-                    dem_rl_term_next_log_prob = None
                     # Select actions according to demonstrations
                     if self.w_demonstrations_next_actions_in_demonstrations_rl_term is True:
                         dem_rl_term_next_actions = self.scale_and_clamp_demo_actions(next_actions)

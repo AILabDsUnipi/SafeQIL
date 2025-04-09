@@ -3,11 +3,12 @@ import yaml
 import shutil
 import pathlib
 import sys
+import csv
 
 
 def resolve_source_path():
-    SOURCE_DIR = pathlib.Path(__file__).absolute().parent.parent.parent
-    sys.path.insert(0, str(SOURCE_DIR))
+    source_dir = pathlib.Path(__file__).absolute().parent.parent.parent
+    sys.path.insert(0, str(source_dir))
 
 
 def get_config(config_file='config_sac.yaml'):
@@ -16,6 +17,7 @@ def get_config(config_file='config_sac.yaml'):
             yaml_data = yaml.safe_load(file)
     except Exception as e:
         print('Error reading the config file. Cannot find the specified path: {}'.format(config_file))
+        print('Error: {}'.format(e))
 
     return yaml_data
 
@@ -26,6 +28,24 @@ def write_config(dict_data, config_path):
             yaml.safe_dump(dict_data, yaml_file, sort_keys=False)
     except Exception as e:
         print('Error writing the config file. Cannot find the specified path: {}'.format(config_path))
+        print('Error: {}'.format(e))
+
+
+def write_info_file(info, file_name, info_dir):
+    try:
+        file_path = os.path.join(info_dir, f'{file_name}.csv')
+        with open(file_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+
+            # 1) Write a row of keys
+            keys = list(info.keys())
+            writer.writerow(keys)
+
+            # 2) Write a row of values in the same order
+            values = [info[k] for k in keys]
+            writer.writerow(values)
+    except Exception as e:
+        print('Error writing the info file: \n{}'.format(e))
 
 
 def get_result_dirs(exp_id, config_file_name, test_only=False, seed=None, provided_exp_id=None):

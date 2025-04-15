@@ -114,6 +114,7 @@ class SAC(ABC):
             self.w_use_target_critic: bool = self.config['SAC']['w_use_target_critic']
             self.w_compute_analytically_min_dem_q_value: bool = self.config['SAC']['w_compute_analytically_min_dem_q_value']
             self.dem_q_value_stat: str = self.config['SAC']['dem_q_value_stat']
+            self.w_closest_state_min: bool = self.config['SAC']['w_closest_state_min']
             self.w_discriminator: bool = self.config['SAC']['w_discriminator']
             self.w_threshold_in_discriminator_weights: bool = self.config['SAC']['w_threshold_in_discriminator_weights']
             self.threshold_in_discriminator_weights: float = self.config['SAC']['threshold_in_discriminator_weights']
@@ -241,7 +242,7 @@ class SAC(ABC):
                 self.constraint_lambda_lr = self.config['SAC']['lambda_constraint_lr']
                 self.w_dual_grad_desc = self.config['SAC']['w_dual_grad_desc']
                 # Define torch dataset for demonstrations
-                expert_dataset = ExpertDataset(
+                self.expert_dataset = ExpertDataset(
                     self.config['SAC']['expert_dataset_path'],
                     device=self.device,
                     use_images=self.use_image_obs,
@@ -250,12 +251,14 @@ class SAC(ABC):
                     normalize_features=self.config['Experiment']['normalize_features'],
                     normalize_rewards=self.config['Experiment']['normalize_rewards'],
                     smooth_actions=self.config['SAC']['smooth_actions'],
-                    smooth_factor=self.config['SAC']['smooth_factor']
+                    smooth_factor=self.config['SAC']['smooth_factor'],
+                    compute_discounted_rewards=self.w_compute_analytically_target_in_demonstrations_rl_term,
+                    build_search_memory=self.w_closest_state_min
                 )
                 # Define torch loader based on torch dataset for training the policy wrt the constraints
-                drop_last = len(expert_dataset) > self.batch_size
+                drop_last = len(self.expert_dataset) > self.batch_size
                 self.expert_train_loader = th.utils.data.DataLoader(
-                    dataset=expert_dataset,
+                    dataset=self.expert_dataset,
                     batch_size=self.batch_size,
                     shuffle=True,
                     drop_last=drop_last
@@ -516,7 +519,7 @@ class SAC(ABC):
                 next_actions, next_log_prob = self.actor.action_log_prob(replay_data.next_observations)
                 # Compute the next Q values: min over all critics' targets
                 next_q_values = th.cat(self.critic_target(replay_data.next_observations, next_actions), dim=1)
-                next_q_values, _ = th.min(next_q_values, dim=1, keepdim=True)
+                next_q_values = th.min(next_q_values, dim=1, keepdim=True)[0].detach()
                 # add entropy term
                 next_q_values_wo_entropy = next_q_values.clone()
                 next_q_values = next_q_values - ent_coef * next_log_prob.reshape(-1, 1)
@@ -1073,7 +1076,7 @@ class SAC(ABC):
                                              and shape=[batch_size, *action_space.shape],
                                           7) next_observations of type torch.Tensor with dtype=torch.float32
                                              and shape=[batch_size, *observation_space.shape],
-        :param rollout_data: List similar to 'demonstrations'.
+        :param rollout_data: List similar to 'demonstrations' but for rollouts.
         :param rollout_q_values: Tuple with the Q-values of the rollout state-action pairs.
             Note that the tuple consists of two tensors, one for the estimated Q-values of each critic.
         :param target_rollout_q_values_wo_reward: Torch.Tensor with the targets without rewards for the TD loss, that is,
@@ -1117,46 +1120,69 @@ class SAC(ABC):
         scaled_expert_actions = self.scale_and_clamp_demo_actions(actions)
         dem_q_values = self.critic(observations, scaled_expert_actions)
         dem_q_values_catted = th.cat(dem_q_values, dim=1)
-        dem_q_values_catted_target = th.cat(self.critic_target(observations, scaled_expert_actions), dim=1)
-        # Get the statistic Q-value
-        if self.dem_q_value_stat == 'min':
-            dem_q_value_stat = th.min(dem_q_values_catted).detach()
-            if self.w_use_target_critic is True:
-                dem_q_value_stat = th.min(dem_q_values_catted_target).detach()
-            elif self.w_compute_analytically_min_dem_q_value is True:
-                dem_q_value_stat = self.min_disc_reward
-        elif self.dem_q_value_stat == 'max':
-            dem_q_value_stat = th.max(dem_q_values_catted).detach()
-            if self.w_use_target_critic is True:
-                dem_q_value_stat = th.max(dem_q_values_catted_target).detach()
-            elif self.w_compute_analytically_min_dem_q_value is True:
-                dem_q_value_stat = self.max_disc_reward
-        elif self.dem_q_value_stat == 'mean':
-            dem_q_value_stat = th.mean(dem_q_values_catted).detach()
-            if self.w_use_target_critic is True:
-                dem_q_value_stat = th.mean(dem_q_values_catted_target).detach()
-            elif self.w_compute_analytically_min_dem_q_value is True:
-                dem_q_value_stat = self.mean_disc_reward
-        elif self.dem_q_value_stat == 'median':
-            dem_q_value_stat = th.median(dem_q_values_catted).detach()
-            if self.w_use_target_critic is True:
-                dem_q_value_stat = th.median(dem_q_values_catted_target).detach()
-            elif self.w_compute_analytically_min_dem_q_value is True:
-                dem_q_value_stat = self.median_disc_reward
-        elif self.dem_q_value_stat == '25_quant':
-            dem_q_value_stat = th.quantile(dem_q_values_catted, 0.25).detach()
-            if self.w_use_target_critic is True:
-                dem_q_value_stat = th.quantile(dem_q_values_catted_target, 0.25).detach()
-            elif self.w_compute_analytically_min_dem_q_value is True:
-                dem_q_value_stat = self.twenty_five_quant_disc_reward
-        elif self.dem_q_value_stat == '75_quant':
-            dem_q_value_stat = th.quantile(dem_q_values_catted, 0.75).detach()
-            if self.w_use_target_critic is True:
-                dem_q_value_stat = th.quantile(dem_q_values_catted_target, 0.75).detach()
-            elif self.w_compute_analytically_min_dem_q_value is True:
-                dem_q_value_stat = self.seventy_five_quant_disc_reward
+        if self.w_closest_state_min is True:
+            # Get the statistic Q-value, that is, different value as target for each rollout Q-value
+            (
+                _,
+                _,
+                closest_rewards,
+                closest_dones,
+                closest_next_states,
+                closest_next_actions
+            ) = self.expert_dataset.find_closest_states_batch(rollout_observations.detach().cpu().numpy())
+            closest_rewards = th.tensor(closest_rewards[:, None], device=self.device, dtype=th.float32)
+            closest_dones = th.tensor(closest_dones[:, None], device=self.device, dtype=th.float32)
+            closest_next_states = th.tensor(closest_next_states, device=self.device, dtype=th.float32)
+            closest_next_actions = th.tensor(closest_next_actions, device=self.device, dtype=th.float32)
+            closest_next_actions = self.scale_and_clamp_demo_actions(closest_next_actions)
+            with th.no_grad():  # To speed-up computations
+                closest_next_q_values = th.min(
+                    th.cat(self.critic_target(closest_next_states, closest_next_actions), dim=1),
+                    dim=1,
+                    keepdim=True
+                )[0].detach()
+            dem_q_value_stat = closest_rewards + (1 - closest_dones) * self.gamma * closest_next_q_values
         else:
-            raise ValueError(f"The specified statistic is not supported: {self.dem_q_value_stat}")
+            # Get the statistic Q-value, that is, a single value to use as target for all rollout Q-values
+            dem_q_values_catted_target = th.cat(self.critic_target(observations, scaled_expert_actions), dim=1)
+            if self.dem_q_value_stat == 'min':
+                dem_q_value_stat = th.min(dem_q_values_catted).detach()
+                if self.w_use_target_critic is True:
+                    dem_q_value_stat = th.min(dem_q_values_catted_target).detach()
+                elif self.w_compute_analytically_min_dem_q_value is True:
+                    dem_q_value_stat = self.min_disc_reward
+            elif self.dem_q_value_stat == 'max':
+                dem_q_value_stat = th.max(dem_q_values_catted).detach()
+                if self.w_use_target_critic is True:
+                    dem_q_value_stat = th.max(dem_q_values_catted_target).detach()
+                elif self.w_compute_analytically_min_dem_q_value is True:
+                    dem_q_value_stat = self.max_disc_reward
+            elif self.dem_q_value_stat == 'mean':
+                dem_q_value_stat = th.mean(dem_q_values_catted).detach()
+                if self.w_use_target_critic is True:
+                    dem_q_value_stat = th.mean(dem_q_values_catted_target).detach()
+                elif self.w_compute_analytically_min_dem_q_value is True:
+                    dem_q_value_stat = self.mean_disc_reward
+            elif self.dem_q_value_stat == 'median':
+                dem_q_value_stat = th.median(dem_q_values_catted).detach()
+                if self.w_use_target_critic is True:
+                    dem_q_value_stat = th.median(dem_q_values_catted_target).detach()
+                elif self.w_compute_analytically_min_dem_q_value is True:
+                    dem_q_value_stat = self.median_disc_reward
+            elif self.dem_q_value_stat == '25_quant':
+                dem_q_value_stat = th.quantile(dem_q_values_catted, 0.25).detach()
+                if self.w_use_target_critic is True:
+                    dem_q_value_stat = th.quantile(dem_q_values_catted_target, 0.25).detach()
+                elif self.w_compute_analytically_min_dem_q_value is True:
+                    dem_q_value_stat = self.twenty_five_quant_disc_reward
+            elif self.dem_q_value_stat == '75_quant':
+                dem_q_value_stat = th.quantile(dem_q_values_catted, 0.75).detach()
+                if self.w_use_target_critic is True:
+                    dem_q_value_stat = th.quantile(dem_q_values_catted_target, 0.75).detach()
+                elif self.w_compute_analytically_min_dem_q_value is True:
+                    dem_q_value_stat = self.seventy_five_quant_disc_reward
+            else:
+                raise ValueError(f"The specified statistic is not supported: {self.dem_q_value_stat}")
         # Constraint critic loss
         if self.w_expectile_loss is True:
             constraint_critic_loss = 0.5 * (self.max_min_coef if self.w_max_min is True else 1.0) * sum(
@@ -1225,7 +1251,6 @@ class SAC(ABC):
         ### Compute RL term for demonstrations of constraint critic loss
         dem_rl_term_constraint_critic_loss = None
         if self.w_demonstrations_rl_term is True:
-            target_q_values = None
             if self.w_compute_analytically_target_in_demonstrations_rl_term is True:
                 # Add extra dimension to 'rewards' to match 'current_q_values' dimensionality
                 target_q_values = disc_rewards[:, None]
@@ -1248,13 +1273,13 @@ class SAC(ABC):
                         dem_rl_term_next_actions, dem_rl_term_next_log_prob = self.actor.action_log_prob(next_observations)
                     # Compute the next Q values: min over all critics' targets
                     next_q_values = th.cat(self.critic_target(next_observations, dem_rl_term_next_actions), dim=1)
-                    next_q_values, _ = th.min(next_q_values, dim=1, keepdim=True)
+                    next_q_values = th.min(next_q_values, dim=1, keepdim=True)[0].detach()
                     # add entropy term
                     if self.w_entropy_in_demonstrations_rl_term is True:
                         next_q_values -= ent_coef * dem_rl_term_next_log_prob.reshape(-1, 1)
-                    # td error + entropy term
-                    # Add extra dimension to 'rewards' and 'dones' to match 'next_q_values' dimensionality
-                    target_q_values = rewards[:, None] + (1 - dones[:, None]) * self.gamma * next_q_values
+                # td error + entropy term
+                # Add extra dimension to 'rewards' and 'dones' to match 'next_q_values' dimensionality
+                target_q_values = rewards[:, None] + (1 - dones[:, None]) * self.gamma * next_q_values
             ## Get current Q-values estimates for each critic network using actions from demonstrations
             current_q_values = self.critic(observations, scaled_expert_actions)
             ## Compute the loss

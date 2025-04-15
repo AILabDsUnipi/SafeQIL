@@ -184,6 +184,23 @@ def main(argv):
     )
     # Check the consistency between 'w_threshold_in_discriminator_weights' and 'w_gail_sac'
     assert not (config['SAC']['w_threshold_in_discriminator_weights'] is True and config['SAC']['w_gail_sac'] is True)
+    # Check the consistency between 'w_closest_state_min' and 'w_q_values'
+    assert not (config['SAC']['w_closest_state_min'] is True and config['SAC']['w_q_values'] is False)
+    # Check the consistency between 'w_closest_state_min' and 'w_use_target_critic'
+    assert not (config['SAC']['w_closest_state_min'] is True and config['SAC']['w_use_target_critic'] is False)
+    # Check the consistency between 'w_closest_state_min', 'w_max_min' and 'w_expectile_loss'
+    assert not (
+            config['SAC']['w_closest_state_min'] is True and
+            config['SAC']['w_max_min'] is False and
+            config['SAC']['w_expectile_loss'] is False
+    )
+    # Check the consistency between 'w_closest_state_min' and 'w_compute_analytically_min_dem_q_value'
+    assert not (
+            config['SAC']['w_closest_state_min'] is True and
+            config['SAC']['w_compute_analytically_min_dem_q_value'] is True
+    )
+    # Check the consistency between 'w_closest_state_min' and 'w_gail_sac'
+    assert not (config['SAC']['w_closest_state_min'] is True and config['SAC']['w_gail_sac'] is True)
 
     # Create the environment
     env = safety_gymnasium.make(
@@ -231,6 +248,7 @@ def main(argv):
     config['Experiment']['load_checkpoint'] = True
     config['Experiment']['checkpoint_path'] = os.path.join(files_dir, 'chkpts')
     config['Experiment']['save_model'] = False
+    config['Experiment']['normalize_rewards'] = False  # Test always with original rewards
 
     # Get the test seed
     test_seed = get_test_seed(config)

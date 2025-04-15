@@ -27,6 +27,7 @@ def main(argv):
     assert config["Experiment"]["test_model"] is True
     assert config["game"]["with_human"] is False
     assert config["Experiment"]["save_model"] is False
+    assert config["Experiment"]["normalize_rewards"] is False  # Test always with original rewards
 
     # Create the environment
     env = safety_gymnasium.make(

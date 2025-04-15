@@ -52,9 +52,10 @@ SAC:
   w_lower_bound: False
   w_expectile_loss: False
   expectile_t: 0.9  # To penalize more the positive errors (i.e., rollout_q_value - dem_q_value_stat > 0 ==> rollout_q_value > dem_q_value_stat), choose values (0.5, 1.0]
-  w_use_target_critic: False
-  w_compute_analytically_min_dem_q_value: True
+  w_use_target_critic: True
+  w_compute_analytically_min_dem_q_value: False
   dem_q_value_stat: 'min'  # The statistic to be used when 'w_compute_analytically_min_dem_q_value' is True. Options: 'min', 'mean', 'median', 'max', '25_quant', '75_quant'
+  w_closest_state_min: True
   w_discriminator: True
   w_actions_in_discriminator: False
   discriminator_lr: 0.0003
@@ -66,13 +67,13 @@ SAC:
   discriminator_icrl_regularization_coef: 0.5
   w_discriminator_dac_regularization: True
   discriminator_dac_regularization_coef: 0.005
-  w_threshold_in_discriminator_weights: True
+  w_threshold_in_discriminator_weights: False
   threshold_in_discriminator_weights: 0.5
   w_demonstrations_rl_term: True
   demonstrations_rl_term_coef: 1.0
-  w_demonstrations_next_actions_in_demonstrations_rl_term: False
+  w_demonstrations_next_actions_in_demonstrations_rl_term: True
   w_entropy_in_demonstrations_rl_term: False
-  w_compute_analytically_target_in_demonstrations_rl_term: True
+  w_compute_analytically_target_in_demonstrations_rl_term: False
   w_ood_rl_term: True
   ood_rl_term_coef: 1.0
   w_discriminator_rewards_in_ood_rl_term: True
@@ -101,7 +102,7 @@ Experiment:
   # Games/Steps
   max_timesteps_per_game: 1000  # max timesteps per episode in train mode
   test_max_timesteps_per_game: 1000  # max steps per episode in test mode
-  test_max_games: 5  # 40  # print avg test reward in the interval
+  test_max_games: 40  # print avg test reward in the interval
 
   # Saving
   save_model: True
@@ -110,7 +111,7 @@ Experiment:
   # Testing
   test_model: False # if True, no training
   load_checkpoint: False
-  checkpoint_path: ""
+  checkpoint_path: "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_discriminator_threshold/sac_w_all_and_w_dac_reg_dac_coef=0.001_w_discr_rew_w_entr_in_ood_rl_term_w_norm_rew_results/sac_w_all_and_w_dac_reg_dac_coef=0.001_w_discr_rew_w_discr_thr=0.95_w_entr_in_ood_rl_term_w_norm_rew_results_1/train_results/tmp/chkpts"
   checkpoint_prefix: "last"  # Options: "best_reward", "lowest_constr", "last"
 
   render: False

@@ -85,6 +85,7 @@ def main(argv):
     config['Experiment']['load_checkpoint'] = True
     config['Experiment']['checkpoint_path'] = os.path.join(files_dir, 'chkpts')
     config['Experiment']['save_model'] = False
+    config['Experiment']['normalize_rewards'] = False  # Test always with original rewards
 
     # Get the test seed
     test_seed = get_test_seed(config)

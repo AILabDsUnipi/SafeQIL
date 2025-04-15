@@ -200,6 +200,8 @@ class ExpertDataset(Dataset):
             smooth_actions=False,
             smooth_factor=0.9,
             gamma=0.99,
+            compute_discounted_rewards=False,
+            build_search_memory=False
     ):
 
         print("\nLoading demonstrations ...")
@@ -213,17 +215,20 @@ class ExpertDataset(Dataset):
         self.normalize_rewards = normalize_rewards
         self.smooth_actions = smooth_actions
         self.smooth_factor = smooth_factor
+        self.compute_discounted_rewards = compute_discounted_rewards
+        self.build_search_memory = build_search_memory
 
         self.idx_to_file_and_step = []
         self.data_store = {}
 
         # Get discounted rewards
-        self.all_discounted_rewards, *_ = find_step_wise_discounted_rewards_and_statistics(
-            directory,
-            self.normalize_rewards,
-            self.env_id,
-            gamma
-        )
+        if self.compute_discounted_rewards is True:
+            self.all_discounted_rewards, *_ = find_step_wise_discounted_rewards_and_statistics(
+                directory,
+                self.normalize_rewards,
+                self.env_id,
+                gamma
+            )
 
         # Build an index that maps a flat list index to (filename, episode, step_key)
         for filename in os.listdir(directory):
@@ -254,6 +259,11 @@ class ExpertDataset(Dataset):
                     for step in data['actions'][episode].keys():  # Assuming all keys are the same across the dicts
                         self.idx_to_file_and_step.append((filepath, episode, step))
         print("{} samples were mapped successfully!".format(len(self.idx_to_file_and_step)))
+
+        # If load_to_memory is True, we can build a memory for searching the closest states
+        self.memory_built = False
+        if self.build_search_memory is True:
+            self._build_search_memory()
 
     def smooth_actions_func(self, actions):
         if self.smooth_actions is True:
@@ -331,7 +341,9 @@ class ExpertDataset(Dataset):
                     idx = 0
 
         # Discounted reward
-        disc_reward = self.all_discounted_rewards[episode][step_key]
+        disc_reward = (
+            None if self.compute_discounted_rewards is False else self.all_discounted_rewards[episode][step_key]
+        )
 
         ## Reward
         reward = data['reward'][episode][step_key]
@@ -392,6 +404,137 @@ class ExpertDataset(Dataset):
         all_observations = np.stack(all_observations)
 
         return all_actions, all_observations
+
+    def _build_search_memory(self):
+        """
+        Build arrays in memory for quick retrieval of:
+            (state, action, reward, done, next_state, next_action)
+        This allows fast nearest-neighbor lookups (by cosine similarity).
+        """
+
+        if not self.load_to_memory:
+            raise ValueError(
+                "You must have 'load_to_memory=True' to allow in-memory searching. "
+            )
+
+        all_states = []
+        all_actions = []
+        all_rewards = []
+        all_dones = []
+        all_next_states = []
+        all_next_actions = []
+
+        # We'll also store the norm of each state for quick cosine similarity
+        all_states_norms = []
+
+        # We iterate once through the entire dataset to build this memory
+        for idx in range(len(self)):
+            (
+                actions,  # shape (act_dim,)
+                observations,  # shape (obs_dim,)
+                dones,
+                rewards,
+                disc_rewards,
+                next_actions,
+                next_observations,
+            ) = self[idx]
+
+            # Move them to CPU NumPy arrays (if they're still on GPU)
+            obs_np = observations.cpu().numpy()
+            act_np = actions.cpu().numpy()
+            rew_np = rewards.cpu().numpy()
+            done_np = dones.cpu().numpy()
+            next_obs_np = next_observations.cpu().numpy()
+            next_act_np = next_actions.cpu().numpy()
+
+            all_states.append(obs_np)
+            all_actions.append(act_np)
+            all_rewards.append(rew_np)
+            all_dones.append(done_np)
+            all_next_states.append(next_obs_np)
+            all_next_actions.append(next_act_np)
+
+            # Precompute norm of the state
+            # Add a small epsilon to avoid division by zero
+            norm_val = np.linalg.norm(obs_np) + 1e-8
+            all_states_norms.append(norm_val)
+
+        # Convert lists to NumPy arrays
+        self._all_states = np.array(all_states)  # shape (N, obs_dim)
+        self._all_actions = np.array(all_actions)  # shape (N, act_dim)
+        self._all_rewards = np.array(all_rewards)  # shape (N,)
+        self._all_dones = np.array(all_dones)  # shape (N,)
+        self._all_next_states = np.array(all_next_states)  # shape (N, obs_dim)
+        self._all_next_actions = np.array(all_next_actions)  # shape (N, act_dim)
+        self._all_states_norms = np.array(all_states_norms)  # shape (N,)
+
+        self.memory_built = True
+        print(f"Built in-memory search with {len(self._all_states)} samples.")
+
+    def find_closest_states_batch(self, query_states: np.ndarray):
+        """
+        Given a batch of query states (shape: (batch_size, obs_dim)),
+        find the closest demonstrated state for each query by cosine similarity.
+
+        Returns:
+            closest_states: shape (batch_size, obs_dim)
+            closest_actions: shape (batch_size, act_dim)
+            closest_rewards: shape (batch_size,)
+            closest_dones: shape (batch_size,)
+            closest_next_states: shape (batch_size, obs_dim)
+            closest_next_actions: shape (batch_size, act_dim)
+        """
+
+        if self.use_images:
+            raise ValueError(
+                "Currently, find_closest_states_batch only supports vector observations. "
+                "If you have images, flatten or embed them first."
+            )
+        if not self.memory_built:
+            raise ValueError(
+                "Memory not built. Ensure _build_search_memory() was called."
+            )
+
+        # query_states: shape (B, obs_dim)
+        # We'll compute cosine similarity in a vectorized manner:
+        # dot(Q, X) / (||Q|| * ||X||)
+        #  - Q: shape (B, obs_dim)
+        #  - X: shape (N, obs_dim)
+
+        # 1) Dot products ⇒ shape (B, N)
+        dot_products = query_states @ self._all_states.T  # matrix multiplication
+
+        # 2) Norm of query states ⇒ shape (B,)
+        query_norms = np.linalg.norm(query_states, axis=1) + 1e-8
+
+        # 3) Norm of dataset states ⇒ shape (N,)
+        #    (already stored in self._all_states_norms)
+
+        # 4) Cosine similarity ⇒ shape (B, N)
+        #    We expand dimensions so shapes line up in broadcast:
+        #      query_norms ⇒ shape (B, 1)
+        #      self._all_states_norms ⇒ shape (1, N)
+        cos_sim = dot_products / (query_norms[:, None] * self._all_states_norms[None, :])
+
+        # 5) Argmax along axis=1 => shape (B,)
+        best_indices = np.argmax(cos_sim, axis=1)
+
+        # 6) Gather the best for each query
+        closest_states = self._all_states[best_indices]  # (B, obs_dim)
+        closest_actions = self._all_actions[best_indices]  # (B, act_dim)
+        closest_rewards = self._all_rewards[best_indices]  # (B,)
+        closest_dones = self._all_dones[best_indices]  # (B,)
+        closest_next_states = self._all_next_states[best_indices]  # (B, obs_dim)
+        closest_next_actions = self._all_next_actions[best_indices]  # (B, act_dim)
+
+        return (
+            closest_states,
+            closest_actions,
+            closest_rewards,
+            closest_dones,
+            closest_next_states,
+            closest_next_actions
+        )
 
 
 if __name__ == '__main__':

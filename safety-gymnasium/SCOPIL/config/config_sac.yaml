@@ -56,6 +56,7 @@ SAC:
   w_compute_analytically_min_dem_q_value: False
   dem_q_value_stat: 'min'  # The statistic to be used when 'w_compute_analytically_min_dem_q_value' is True. Options: 'min', 'mean', 'median', 'max', '25_quant', '75_quant'
   w_closest_state_min: True
+  closest_state_min_func: "cosine_sim_w_discr_embed"  # Options: "cosine_sim", "cosine_sim_w_discr_embed"
   w_discriminator: True
   w_actions_in_discriminator: False
   discriminator_lr: 0.0003

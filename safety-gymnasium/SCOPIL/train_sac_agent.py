@@ -201,6 +201,13 @@ def main(argv):
     )
     # Check the consistency between 'w_closest_state_min' and 'w_gail_sac'
     assert not (config['SAC']['w_closest_state_min'] is True and config['SAC']['w_gail_sac'] is True)
+    # Check the consistency between 'closest_state_min_func', 'w_closest_state_min', 'w_discriminator', and
+    # 'w_actions_in_discriminator'
+    assert not (
+            config['SAC']['w_closest_state_min'] is True and
+            config['SAC']['closest_state_min_func'] == 'cosine_sim_w_discr_embed' and
+            (config['SAC']['w_discriminator'] is False or config['SAC']['w_actions_in_discriminator'] is True)
+    )
 
     # Create the environment
     env = safety_gymnasium.make(

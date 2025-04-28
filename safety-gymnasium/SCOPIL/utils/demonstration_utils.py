@@ -201,7 +201,8 @@ class ExpertDataset(Dataset):
             smooth_factor=0.9,
             gamma=0.99,
             compute_discounted_rewards=False,
-            build_search_memory=False
+            build_search_memory=False,
+            search_func=None
     ):
 
         print("\nLoading demonstrations ...")
@@ -217,6 +218,7 @@ class ExpertDataset(Dataset):
         self.smooth_factor = smooth_factor
         self.compute_discounted_rewards = compute_discounted_rewards
         self.build_search_memory = build_search_memory
+        self.search_func = search_func
 
         self.idx_to_file_and_step = []
         self.data_store = {}
@@ -264,6 +266,10 @@ class ExpertDataset(Dataset):
         self.memory_built = False
         if self.build_search_memory is True:
             self._build_search_memory()
+            assert self.search_func is not None, "Search function must be defined when building search memory."
+            if self.search_func == "cosine_sim_w_discr_embed":
+                # Placeholder for Discriminator
+                self.discriminator = None
 
     def smooth_actions_func(self, actions):
         if self.smooth_actions is True:
@@ -416,6 +422,8 @@ class ExpertDataset(Dataset):
             raise ValueError(
                 "You must have 'load_to_memory=True' to allow in-memory searching. "
             )
+        if self.search_func is None:
+            raise ValueError("Search function must be defined when building search memory.")
 
         all_states = []
         all_actions = []
@@ -424,7 +432,7 @@ class ExpertDataset(Dataset):
         all_next_states = []
         all_next_actions = []
 
-        # We'll also store the norm of each state for quick cosine similarity
+        # We'll also store the norm of each state for quick search in case of cosine similarity on raw observations
         all_states_norms = []
 
         # We iterate once through the entire dataset to build this memory
@@ -454,10 +462,11 @@ class ExpertDataset(Dataset):
             all_next_states.append(next_obs_np)
             all_next_actions.append(next_act_np)
 
-            # Precompute norm of the state
-            # Add a small epsilon to avoid division by zero
-            norm_val = np.linalg.norm(obs_np) + 1e-8
-            all_states_norms.append(norm_val)
+            if self.search_func == "cosine_sim":
+                # Precompute norm of the state
+                # Add a small epsilon to avoid division by zero
+                norm_val = np.linalg.norm(obs_np) + 1e-8
+                all_states_norms.append(norm_val)
 
         # Convert lists to NumPy arrays
         self._all_states = np.array(all_states)  # shape (N, obs_dim)
@@ -466,7 +475,7 @@ class ExpertDataset(Dataset):
         self._all_dones = np.array(all_dones)  # shape (N,)
         self._all_next_states = np.array(all_next_states)  # shape (N, obs_dim)
         self._all_next_actions = np.array(all_next_actions)  # shape (N, act_dim)
-        self._all_states_norms = np.array(all_states_norms)  # shape (N,)
+        self._all_states_norms = np.array(all_states_norms)  # shape (N,) or ()
 
         self.memory_built = True
         print(f"Built in-memory search with {len(self._all_states)} samples.")
@@ -494,27 +503,47 @@ class ExpertDataset(Dataset):
             raise ValueError(
                 "Memory not built. Ensure _build_search_memory() was called."
             )
+        if self.search_func is None:
+            raise ValueError("Search function must be defined when searching the closest state.")
 
-        # query_states: shape (B, obs_dim)
         # We'll compute cosine similarity in a vectorized manner:
         # dot(Q, X) / (||Q|| * ||X||)
         #  - Q: shape (B, obs_dim)
         #  - X: shape (N, obs_dim)
 
+        # 0) Get all the states in a vector format according to the 'search_func'
+        if self.search_func == "cosine_sim":
+            # Use the raw states (and precalculated norms for the demonstrated states)
+            query_states_vector = query_states
+            dem_states_vector = self._all_states
+            dem_states_norms = self._all_states_norms
+        elif self.search_func == "cosine_sim_w_discr_embed":
+            query_states_vector = self.discriminator.embeddings(
+                th.from_numpy(query_states).to(th.float32).to(self.device)
+            ).detach().cpu().numpy()
+            dem_states_vector = self.discriminator.embeddings(
+                th.from_numpy(self._all_states).to(th.float32).to(self.device)
+            ).detach().cpu().numpy()
+            dem_states_norms = None
+        else:
+            raise ValueError(f"Search function '{self.search_func}' not supported.")
+
         # 1) Dot products ⇒ shape (B, N)
-        dot_products = query_states @ self._all_states.T  # matrix multiplication
+        dot_products = query_states_vector @ dem_states_vector.T  # matrix multiplication
 
         # 2) Norm of query states ⇒ shape (B,)
-        query_norms = np.linalg.norm(query_states, axis=1) + 1e-8
+        query_states_norms = np.linalg.norm(query_states_vector, axis=1) + 1e-8
 
         # 3) Norm of dataset states ⇒ shape (N,)
-        #    (already stored in self._all_states_norms)
+        if dem_states_norms is None:
+            dem_states_norms = np.linalg.norm(dem_states_vector, axis=1) + 1e-8
+        # Otherwise, already stored in self._all_states_norms
 
         # 4) Cosine similarity ⇒ shape (B, N)
         #    We expand dimensions so shapes line up in broadcast:
-        #      query_norms ⇒ shape (B, 1)
-        #      self._all_states_norms ⇒ shape (1, N)
-        cos_sim = dot_products / (query_norms[:, None] * self._all_states_norms[None, :])
+        #      query_states_norms ⇒ shape (B, 1)
+        #      dem_states_norms ⇒ shape (1, N)
+        cos_sim = dot_products / (query_states_norms[:, None] * dem_states_norms[None, :])
 
         # 5) Argmax along axis=1 => shape (B,)
         best_indices = np.argmax(cos_sim, axis=1)

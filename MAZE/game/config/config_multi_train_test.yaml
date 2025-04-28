@@ -1,6 +1,0 @@
-num_exp: 2
-test_seeds: [2023, 2024]
-algo: 'SAC' # 'PPO' # 'SAC'
-SL_finetuning: True
-SL_finetuning_datasets: ["layout_10_up_right", "layout_10_second_row_up", "layout_10_forth_row_up", "layout_3_fifth_row_bottom", "layout_3_sixth_row_bottom"]
-

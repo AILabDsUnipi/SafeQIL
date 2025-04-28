@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from torch.autograd import grad as torch_grad
+import torch.nn.functional as F
 from gymnasium import spaces
 
 from .buffer import ReplayBuffer
@@ -64,10 +65,14 @@ class Discriminator(nn.Module):
     def _build_model(self):
 
         # NN architecture
-        self.network = nn.Sequential(
+        self._embeddings = nn.Sequential(
             nn.Linear(self.input_dim, self.hidden_dim_layer1),
             self.activation_fn(),
             nn.Linear(self.hidden_dim_layer1, self.hidden_dim_layer2),
+        )
+        self._embeddings = self._embeddings.to(self.device)
+        self.network = nn.Sequential(
+            self._embeddings,
             self.activation_fn(),
             nn.Linear(self.hidden_dim_layer2, 1),
         )
@@ -91,6 +96,15 @@ class Discriminator(nn.Module):
     @th.no_grad()
     def predict(self, states: th.Tensor, actions: th.Tensor) -> th.Tensor:
         return th.sigmoid(self.forward(states, actions))
+
+    @th.no_grad()
+    def embeddings(self, states: th.Tensor) -> th.Tensor:
+        assert self.w_actions is False, "Embeddings are only available for state-only discriminator"
+
+        x = states.to(th.float32)
+        x = self._embeddings(x)
+        x = F.normalize(x, p=2, dim=1)  # Normalization often is helpful for embeddings
+        return x
 
     def update(self) -> Dict[str, float]:
 

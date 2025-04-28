@@ -115,6 +115,7 @@ class SAC(ABC):
             self.w_compute_analytically_min_dem_q_value: bool = self.config['SAC']['w_compute_analytically_min_dem_q_value']
             self.dem_q_value_stat: str = self.config['SAC']['dem_q_value_stat']
             self.w_closest_state_min: bool = self.config['SAC']['w_closest_state_min']
+            self.closest_state_min_func: bool = self.config['SAC']['closest_state_min_func']
             self.w_discriminator: bool = self.config['SAC']['w_discriminator']
             self.w_threshold_in_discriminator_weights: bool = self.config['SAC']['w_threshold_in_discriminator_weights']
             self.threshold_in_discriminator_weights: float = self.config['SAC']['threshold_in_discriminator_weights']
@@ -253,7 +254,8 @@ class SAC(ABC):
                     smooth_actions=self.config['SAC']['smooth_actions'],
                     smooth_factor=self.config['SAC']['smooth_factor'],
                     compute_discounted_rewards=self.w_compute_analytically_target_in_demonstrations_rl_term,
-                    build_search_memory=self.w_closest_state_min
+                    build_search_memory=self.w_closest_state_min,
+                    search_func=self.closest_state_min_func,
                 )
                 # Define torch loader based on torch dataset for training the policy wrt the constraints
                 drop_last = len(self.expert_dataset) > self.batch_size
@@ -281,6 +283,8 @@ class SAC(ABC):
                         self.config['SAC']['discriminator_dac_regularization_coef'],
                         device=self.device,
                     )
+                    # In the case of the min closest state search, pass the 'Discriminator' to the 'Dataset'
+                    self.expert_dataset.discriminator = self.discriminator
                 else:
                     # Define 'constraint_lambda'
                     self.constraint_lambda = th.tensor(

@@ -86,6 +86,7 @@ class ConstraintNet(nn.Module):
             self.regularizer_coeff = config['ICRL']['constraint_net_regularizer_coeff']
             self.target_kl_old_new = config['ICRL']['constraint_net_target_kl_old_new']
             self.target_kl_new_old = config['ICRL']['constraint_net_target_kl_new_old']
+            self.constraint_net_importance_sampling = config['ICRL']['constraint_net_importance_sampling']
 
             self.eps = 1e-05
             self.current_progress_remaining = 1.
@@ -182,7 +183,7 @@ class ConstraintNet(nn.Module):
 
     def train_network(
             self,
-            iterations: np.ndarray,
+            iterations: int,
             nominal_obs: np.ndarray,
             nominal_acts: np.ndarray,
             episode_lengths: np.ndarray,
@@ -226,6 +227,8 @@ class ConstraintNet(nn.Module):
                 expert_obs_batch = self.expert_obs[exp_batch_indices]
                 expert_acts_batch = self.expert_acts[exp_batch_indices]
                 is_batch = is_weights[nom_batch_indices][..., None]
+                if self.constraint_net_importance_sampling is False:
+                    is_batch = th.ones_like(nominal_obs_batch)
 
                 # Make predictions
                 nominal_preds = self.__call__(nominal_obs_batch, nominal_acts_batch)
@@ -266,7 +269,12 @@ class ConstraintNet(nn.Module):
         }
         return training_returns
 
-    def compute_is_weights(self, preds_old: th.Tensor, preds_new: th.Tensor, episode_lengths: np.ndarray) -> th.tensor:
+    def compute_is_weights(
+            self,
+            preds_old: th.Tensor,
+            preds_new: th.Tensor,
+            episode_lengths: np.ndarray
+    ) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
         with th.no_grad():
             n_episodes = len(episode_lengths)
             cumulative = [0] + list(accumulate(episode_lengths))
@@ -294,7 +302,7 @@ class ConstraintNet(nn.Module):
             self,
             obs: Union[np.ndarray, th.Tensor],
             acts: Union[np.ndarray, th.Tensor]
-    ) -> Tuple[th.tensor, th.Tensor]:
+    ) -> Tuple[th.Tensor, th.Tensor]:
 
         acts = self.clip_actions(acts)
         acts = self.reshape_actions(acts)

@@ -1,4 +1,5 @@
 import os
+import copy
 
 import numpy as np
 import torch as th
@@ -7,6 +8,7 @@ from gymnasium import spaces
 from SCOPIL.algos.sac.sac_continuous_agent import SAC
 from SCOPIL.algos.icrl.ppo_continuous_agent import ContinuousPPOAgent
 from SCOPIL.algos.icrl.constraint_net import ConstraintNet
+from SCOPIL.algos.vicrl.variational_constraint_net import VariationalConstraintNet
 from SCOPIL.utils.exp_utils import set_random_seed
 
 
@@ -73,9 +75,13 @@ class ICRLAg(object):
         # Set the randomness here before creating the networks
         set_random_seed(seed, using_cuda=device.type == th.device("cuda").type)
 
-        # Define the PPO agent
+        ## Define the PPO agent
+        # Create an 'ICRL' field and copy the 'VICRL' since 'ContinuousPPOAgent'
+        # gets the hyperparameters from 'ICRL' field
+        tmp_config = {'ICRL': copy.deepcopy(config['VICRL'])}
+        # PPO agent
         self.ppo = ContinuousPPOAgent(
-            config=config,
+            config=tmp_config,
             observation_space=observation_space,
             action_space=action_space,
             only_test=only_test,
@@ -83,7 +89,7 @@ class ICRLAg(object):
         )
 
         # Define the constraint net
-        self.constraint_net = ConstraintNet(
+        self.constraint_net = self.define_constraint_net(
             config=config,
             observation_space=observation_space,
             action_space=action_space,
@@ -95,6 +101,24 @@ class ICRLAg(object):
         if only_test is True:
             self.ppo.policy.eval()
             self.constraint_net.eval()
+
+    @staticmethod
+    def define_constraint_net(
+            config,
+            observation_space,
+            action_space,
+            only_test,
+            device
+    ):
+        constraint_net = ConstraintNet(
+            config=config,
+            observation_space=observation_space,
+            action_space=action_space,
+            only_test=only_test,
+            device=device,
+        )
+
+        return constraint_net
 
     def save(self, prefix, path):
         """
@@ -136,3 +160,59 @@ class ICRLAg(object):
         action = self.clip_action(action)
 
         return action
+
+
+def get_vicrl_agent(config, env, only_test=False, seed=None):
+
+    device, action_space, observation_space = get_agent_info(config, env)
+
+    vicrl = VICRLAg(
+        config=config,
+        observation_space=observation_space,
+        action_space=action_space,
+        only_test=only_test,
+        device=device,
+        seed=seed
+    )
+
+    return vicrl
+
+
+class VICRLAg(ICRLAg):
+
+    def __init__(
+            self,
+            config,
+            observation_space,
+            action_space,
+            only_test,
+            device,
+            seed
+    ):
+
+        super(VICRLAg, self).__init__(
+            config,
+            observation_space,
+            action_space,
+            only_test,
+            device,
+            seed
+        )
+
+    @staticmethod
+    def define_constraint_net(
+            config,
+            observation_space,
+            action_space,
+            only_test,
+            device
+    ):
+        constraint_net = VariationalConstraintNet(
+            config=config,
+            observation_space=observation_space,
+            action_space=action_space,
+            only_test=only_test,
+            device=device,
+        )
+
+        return constraint_net

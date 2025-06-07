@@ -1,7 +1,6 @@
 from tqdm import tqdm
 
 import numpy as np
-import gymnasium as gym
 
 from .train_experiment import TrainExperiment
 from SCOPIL.utils.exp_utils import print_latest_metrics_from_dict
@@ -20,11 +19,11 @@ class ICRLExperiment(TrainExperiment):
         super().__init__(environment, agent, config, file_results_dir, seed)
 
         # Retrieve information from the config file for training
-        self.n_iters = config['ICRL']['n_iters']
-        self.forward_steps = config['ICRL']['forward_steps']
-        self.n_steps = config['ICRL']['n_steps']
-        self.backward_n_rollouts = config['ICRL']['backward_n_rollouts']
-        self.backward_iterations = config['ICRL']['backward_iterations']
+        self.n_iters: int = config['ICRL']['n_iters']
+        self.forward_steps: int = config['ICRL']['forward_steps']
+        self.n_steps: int = config['ICRL']['n_steps']
+        self.backward_n_rollouts: int = config['ICRL']['backward_n_rollouts']
+        self.backward_iterations: int = config['ICRL']['backward_iterations']
 
         # Placeholders
         self.current_progress_remaining = 1

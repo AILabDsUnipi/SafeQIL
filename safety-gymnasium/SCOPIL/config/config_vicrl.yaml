@@ -3,38 +3,40 @@ game:
   with_human: False # One or two humans if True
   use_image_obs: False
 
-ICRL:
+VICRL:
   layer1_size: 64  # number of neurons in the first hidden layer
   layer2_size: 64  # number of neurons in the second hidden layer
   lr: 0.00003  # learning rate of policy, value, and cost networks
   n_steps: 400  # 2000 # number of steps per episode
-  forward_steps : 2000  # 200000 # number of steps per iteration (iterations = N of Algorithm 1 in ICRL)
-  n_iters: 3  # 30 # number of iterations (N). n_iters*forward_steps gives the total number of steps
+  forward_steps : 2000  #  # 200000 also consider: 20000, 5000. number of steps per iteration (iterations = N of Algorithm 1 in ICRL)
+  n_iters: 3  # 50  # also consider: 30, 150, 500. number of iterations (N). n_iters*forward_steps gives the total number of steps
   reward_gamma: 0.99
-  reward_gae_lambda: 0.95
+  reward_gae_lambda: 0.9  # also consider:0.95
   reward_vf_coef: 0.5
   max_grad_norm: 0.5
   batch_size: 10  # 128
-  epochs: 3  # 20 # number of policy, value, and cost networks updates per episode
-  clip_range: 0.2
-  target_kl: 0.02
-  constraint_net_layer1_size: 40  # 20
-  constraint_net_layer2_size: 40  # None
-  constraint_net_regularizer_coeff: 0.6
-  constraint_net_cn_lr: 0.005
-  constraint_net_anneal_clr_by_factor: 0.9
+  epochs: 3  # 20  # also consider: 10. number of policy, value, and cost networks updates per episode
+  clip_range: 0.4  # also consider: 0.2
+  target_kl: 0.02  # also consider: 0.01
+  constraint_net_layer1_size: 40  # also consider: 64, 20
+  constraint_net_layer2_size: 40  # also consider: 64, None
+  constraint_net_regularizer_coeff: 0.6  # also consider: 0.5
+  constraint_net_cn_lr: 0.005  # also consider: 0.0005, 0.0001
+  constraint_net_anneal_clr_by_factor: 0.9  # also consider: 0.6, 0.5
   constraint_net_target_kl_old_new: 10
   constraint_net_target_kl_new_old: 2.5
   cost_gamma: 0.99
-  cost_gae_lambda: 0.95
+  cost_gae_lambda: 0.9  # also consider: 0.95
   cost_vf_coef: 0.5
-  lambda_initial_value: 1.0
-  lambda_lr: 0.1
+  lambda_initial_value: 0.1  # also consider: 1.0
+  lambda_lr: 0.05  # # also consider: 0.01
   alpha_cost: 0.0
-  backward_iterations: 3  # 10
-  backward_n_rollouts: 5  # 45
-  constraint_net_batch_size: None
-  constraint_net_importance_sampling: True
+  backward_iterations: 3  # 5  # also consider: 10
+  backward_n_rollouts: 5  # 50  # also consider: 100, 10
+  constraint_net_batch_size: None  # also consider: 500, 1000
+  constraint_net_importance_sampling: False
+  constraint_net_di_prior: [0.9, 0.1]  # also consider: [9, 1], [0.09, 0.01]
+  constraint_net_mode: 'sample'
 
   # Demonstrations
   expert_dataset_path: '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/demonstrations'

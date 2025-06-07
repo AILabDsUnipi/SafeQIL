@@ -1,27 +1,188 @@
-# ICRL
+## ICRL
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.0",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.1",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.2",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.3",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.4",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.5",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.6",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.7",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.8"
+#]
+#
+#legends: [
+#  "reg-coef=0.0",
+#  "reg-coef=0.1",
+#  "reg-coef=0.2",
+#  "reg-coef=0.3",
+#  "reg-coef=0.4",
+#  "reg-coef=0.5",
+#  "reg-coef=0.6",
+#  "reg-coef=0.7",
+#  "reg-coef=0.8"
+#]
+#
+#test_seed: "2024"
+#save_dir: "./icrl_multi_exp_results"
+
+
+# SAC with cosine similarity, with GAIL discriminator reward
 log_dirs: [
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.0",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.1",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.2",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.3",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.4",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.5",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.6",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.7",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.8"
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gail_discr_rew/sac_w_cosine_similarity_w_gail_discr_rew_reg_coef=0.05_results",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gail_discr_rew/sac_w_cosine_similarity_w_gail_discr_rew_reg_coef=0.01_results",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gail_discr_rew/sac_w_cosine_similarity_w_gail_discr_rew_reg_coef=0.005_results",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gail_discr_rew/sac_w_cosine_similarity_w_gail_discr_rew_reg_coef=0.001_results",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gail_discr_rew/sac_w_cosine_similarity_w_gail_discr_rew_reg_coef=0.0005_results",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gail_discr_rew/sac_w_cosine_similarity_w_gail_discr_rew_reg_coef=0.0001_results",
 ]
 
 legends: [
-  "reg-coef=0.0",
-  "reg-coef=0.1",
-  "reg-coef=0.2",
-  "reg-coef=0.3",
-  "reg-coef=0.4",
-  "reg-coef=0.5",
-  "reg-coef=0.6",
-  "reg-coef=0.7",
-  "reg-coef=0.8"
+  "reg-coef=0.05",
+  "reg-coef=0.01",
+  "reg-coef=0.005",
+  "reg-coef=0.001",
+  "reg-coef=0.0005",
+  "reg-coef=0.0001",
 ]
 
 test_seed: "2024"
-save_dir: "./icrl_multi_exp_results"
+save_dir: "./sac_w_cosine_similarity_w_gail_discr_rew_multi_exp_results"
+
+
+## SAC with cosine similarity, with GANs discriminator reward
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew/sac_w_cosine_similarity_w_gans_discr_rew_reg_coef=0.05_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew/sac_w_cosine_similarity_w_gans_discr_rew_reg_coef=0.01_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew/sac_w_cosine_similarity_w_gans_discr_rew_reg_coef=0.005_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew/sac_w_cosine_similarity_w_gans_discr_rew_reg_coef=0.001_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew/sac_w_cosine_similarity_w_gans_discr_rew_reg_coef=0.0005_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew/sac_w_cosine_similarity_w_gans_discr_rew_reg_coef=0.0001_results",
+#]
+#
+#legends: [
+#  "reg-coef=0.05",
+#  "reg-coef=0.01",
+#  "reg-coef=0.005",
+#  "reg-coef=0.001",
+#  "reg-coef=0.0005",
+#  "reg-coef=0.0001",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./sac_w_cosine_similarity_w_gans_discr_rew_multi_exp_results"
+
+
+## SAC with cosine similarity, with GANs discriminator reward, without entropy in OOD term
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_w_gans_discr_rew_reg_coef=0.05_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_w_gans_discr_rew_reg_coef=0.01_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_w_gans_discr_rew_reg_coef=0.005_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_w_gans_discr_rew_reg_coef=0.001_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_w_gans_discr_rew_reg_coef=0.0005_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_w_gans_discr_rew_reg_coef=0.0001_wo_entr_in_OOD_term_results",
+#]
+#
+#legends: [
+#  "reg-coef=0.05",
+#  "reg-coef=0.01",
+#  "reg-coef=0.005",
+#  "reg-coef=0.001",
+#  "reg-coef=0.0005",
+#  "reg-coef=0.0001",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./sac_w_cosine_similarity_w_gans_discr_rew_wo_entr_in_OOD_term_multi_exp_results"
+
+
+## SAC with cosine similarity, with AIRL discriminator reward
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_airl_discr_rew/sac_w_cosine_similarity_w_airl_discr_rew_reg_coef=0.05_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_airl_discr_rew/sac_w_cosine_similarity_w_airl_discr_rew_reg_coef=0.01_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_airl_discr_rew/sac_w_cosine_similarity_w_airl_discr_rew_reg_coef=0.005_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_airl_discr_rew/sac_w_cosine_similarity_w_airl_discr_rew_reg_coef=0.001_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_airl_discr_rew/sac_w_cosine_similarity_w_airl_discr_rew_reg_coef=0.0005_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_airl_discr_rew/sac_w_cosine_similarity_w_airl_discr_rew_reg_coef=0.0001_results"
+#]
+#
+#legends: [
+#  "reg-coef=0.05",
+#  "reg-coef=0.01",
+#  "reg-coef=0.005",
+#  "reg-coef=0.001",
+#  "reg-coef=0.0005",
+#  "reg-coef=0.0001",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./sac_w_cosine_similarity_w_airl_discr_rew_multi_exp_results"
+
+
+## SAC with cosine similarity, with GANs discriminator reward, with normalized reward in rest terms
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_w_norm_rew_in_rest_terms/sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_reg_coef=0.05_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_w_norm_rew_in_rest_terms/sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_reg_coef=0.01_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_w_norm_rew_in_rest_terms/sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_reg_coef=0.005_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_w_norm_rew_in_rest_terms/sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_reg_coef=0.001_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_w_norm_rew_in_rest_terms/sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_reg_coef=0.0005_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_w_norm_rew_in_rest_terms/sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_reg_coef=0.0001_results",
+#]
+#
+#legends: [
+#  "reg-coef=0.05",
+#  "reg-coef=0.01",
+#  "reg-coef=0.005",
+#  "reg-coef=0.001",
+#  "reg-coef=0.0005",
+#  "reg-coef=0.0001",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_multi_exp_results"
+
+
+## SAC with cosine similarity in Discriminator embeddings, with GANs discriminator reward
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/discr_embed_w_gans_discr_rew/sac_w_cosine_similarity_in_discr_embed_w_gans_discr_rew_reg_coef=0.05_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/discr_embed_w_gans_discr_rew/sac_w_cosine_similarity_in_discr_embed_w_gans_discr_rew_reg_coef=0.01_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/discr_embed_w_gans_discr_rew/sac_w_cosine_similarity_in_discr_embed_w_gans_discr_rew_reg_coef=0.005_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/discr_embed_w_gans_discr_rew/sac_w_cosine_similarity_in_discr_embed_w_gans_discr_rew_reg_coef=0.001_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/discr_embed_w_gans_discr_rew/sac_w_cosine_similarity_in_discr_embed_w_gans_discr_rew_reg_coef=0.0005_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/discr_embed_w_gans_discr_rew/sac_w_cosine_similarity_in_discr_embed_w_gans_discr_rew_reg_coef=0.0001_results",
+#]
+#
+#legends: [
+#  "reg-coef=0.05",
+#  "reg-coef=0.01",
+#  "reg-coef=0.005",
+#  "reg-coef=0.001",
+#  "reg-coef=0.0005",
+#  "reg-coef=0.0001",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./sac_w_cosine_similarity_in_discr_embed_w_gans_discr_rew_multi_exp_results"
+
+
+## SAC with cosine similarity, with GANs discriminator reward, with normalized reward in rest terms, without entropy in OOD term
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_w_norm_rew_in_rest_terms_wo_entr_in_OOD_term/sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_reg_coef=0.05_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_w_norm_rew_in_rest_terms_wo_entr_in_OOD_term/sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_reg_coef=0.01_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_w_norm_rew_in_rest_terms_wo_entr_in_OOD_term/sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_reg_coef=0.005_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_w_norm_rew_in_rest_terms_wo_entr_in_OOD_term/sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_reg_coef=0.001_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_w_norm_rew_in_rest_terms_wo_entr_in_OOD_term/sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_reg_coef=0.0005_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_w_norm_rew_in_rest_terms_wo_entr_in_OOD_term/sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_reg_coef=0.0001_wo_entr_in_OOD_term_results",
+#]
+#
+#legends: [
+#  "reg-coef=0.05",
+#  "reg-coef=0.01",
+#  "reg-coef=0.005",
+#  "reg-coef=0.001",
+#  "reg-coef=0.0005",
+#  "reg-coef=0.0001",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./sac_w_cosine_similarity_w_gans_discr_rew_w_norm_rew_in_rest_terms_wo_entr_in_OOD_term_multi_exp_results"

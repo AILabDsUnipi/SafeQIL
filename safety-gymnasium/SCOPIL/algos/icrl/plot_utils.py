@@ -1,11 +1,12 @@
 import os
+from typing import Optional, Dict
 
 import pandas as pd
 
 from SCOPIL.utils.plot_utils import group_metrics, plot_train_logs
 
 
-def save_constraint_net_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plots=False):
+def save_constraint_net_logs_and_plot(experiment, files_dir, plot_dir, return_data_for_plots=False) -> Optional[Dict]:
     """
     Save the constraint net logs and plot them.
     :param experiment: The experiment object.

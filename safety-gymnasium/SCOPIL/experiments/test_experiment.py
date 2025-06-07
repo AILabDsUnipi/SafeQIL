@@ -27,6 +27,8 @@ class TestExperiment(BaseExperiment):
             self.algo = 'SAC'
         elif 'ICRL' in list(config.items())[1]:
             self.algo = 'ICRL'
+        elif 'VICRL' in list(config.items())[1]:
+            self.algo = 'VICRL'
         else:
             raise ValueError("There is no valid algorithm provided!")
 

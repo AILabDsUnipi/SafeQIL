@@ -64,6 +64,9 @@ SAC:
   discriminator_gradient_steps: 1
   discriminator_layer1_size: 32  # number of neurons in the first hidden layer
   discriminator_layer2_size: 32 # number of neurons in the second hidden layer
+  w_target_discriminator: True
+  discriminator_tau: 0.005  # factor for polyak update of target discriminator
+  discriminator_target_update_interval: 1  # how many gradient steps of online Discriminator to perform before updating the target Discriminator.
   w_discriminator_icrl_regularization: False
   discriminator_icrl_regularization_coef: 0.5
   w_discriminator_dac_regularization: True
@@ -122,5 +125,6 @@ Experiment:
   test_seed: 2024  # None or int
   device: "cpu"  # "cuda" or "cpu"
   torch_threads: 1
+  dataloader_num_workers: 1  # 1 for no multiprocessing, >1 for multiprocessing
 
 

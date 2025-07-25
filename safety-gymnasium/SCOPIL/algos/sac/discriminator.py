@@ -242,3 +242,13 @@ class Discriminator(nn.Module):
 
         # Load the NN weights
         self.load_state_dict(saved_variables["state_dict"])
+
+    def set_training_mode(self, mode: bool) -> None:
+        """
+        Put the Discriminator in either training or evaluation mode.
+
+        This affects certain modules, such as batch normalisation and dropout.
+
+        :param mode: if true, set to training mode, else set to evaluation mode
+        """
+        self.train(mode)

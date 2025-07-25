@@ -208,6 +208,8 @@ def main(argv):
             config['SAC']['closest_state_min_func'] == 'cosine_sim_w_discr_embed' and
             (config['SAC']['w_discriminator'] is False or config['SAC']['w_actions_in_discriminator'] is True)
     )
+    # Check the consistency between the 'w_target_discriminator' and 'w_discriminator'
+    assert not (config['SAC']['w_target_discriminator'] is True and config['SAC']['w_discriminator'] is False)
 
     # Create the environment
     env = safety_gymnasium.make(

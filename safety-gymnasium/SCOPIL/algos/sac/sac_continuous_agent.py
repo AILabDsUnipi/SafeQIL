@@ -1,5 +1,5 @@
 # Code based on: https://github.com/DLR-RM/stable-baselines3/tree/master/stable_baselines3/sac
-
+import copy
 import os
 import pathlib
 from typing import Dict, List, Optional, Tuple, TypeVar, Union
@@ -132,6 +132,9 @@ class SAC(ABC):
             self.w_entropy_in_ood_rl_term: bool = self.config['SAC']['w_entropy_in_ood_rl_term']
             self.w_gail_sac: bool = self.config['SAC']['w_gail_sac']
             self.discriminator_reward_function_in_gail_sac: str = self.config['SAC']['discriminator_reward_function_in_gail_sac']
+            self.w_target_discriminator: bool = self.config['SAC']['w_target_discriminator']
+            self.discriminator_tau: float = self.config['SAC']['discriminator_tau']
+            self.discriminator_target_update_interval: int = self.config['SAC']['discriminator_target_update_interval']
             # Buffer placeholder
             self.replay_buffer: Optional[ReplayBuffer] = None
         # Define policy keyword arguments
@@ -263,7 +266,8 @@ class SAC(ABC):
                     dataset=self.expert_dataset,
                     batch_size=self.batch_size,
                     shuffle=True,
-                    drop_last=drop_last
+                    drop_last=drop_last,
+                    num_workers=self.config['Experiment']['dataloader_num_workers'],
                 )
                 if self.w_discriminator is True:
                     self.discriminator = Discriminator(
@@ -283,8 +287,18 @@ class SAC(ABC):
                         self.config['SAC']['discriminator_dac_regularization_coef'],
                         device=self.device,
                     )
+                    self.discriminator_to_use = self.discriminator
+                    if self.w_target_discriminator is True:
+                        # Create the target Discriminator as a copy of the Discriminator
+                        self.discriminator_target = copy.deepcopy(self.discriminator)
+                        # Target networks should always be in eval mode
+                        self.discriminator_target.set_training_mode(False)
+                        # Running mean and running var
+                        self.discriminator_batch_norm_stats = get_parameters_by_name(self.discriminator, ["running_"])
+                        self.discriminator_batch_norm_stats_target = get_parameters_by_name(self.discriminator_target, ["running_"])
+                        self.discriminator_to_use = self.discriminator_target
                     # In the case of the min closest state search, pass the 'Discriminator' to the 'Dataset'
-                    self.expert_dataset.discriminator = self.discriminator
+                    self.expert_dataset.discriminator = self.discriminator_to_use
                 else:
                     # Define 'constraint_lambda'
                     self.constraint_lambda = th.tensor(
@@ -472,10 +486,12 @@ class SAC(ABC):
             critic_loss_weights = 1.
             if self.w_discriminator is True:
                 # Get predictions of Discriminator for the rollout state-action pairs
-                rollout_discr_preds = self.discriminator.predict(replay_data.observations, replay_data.actions)
+                rollout_discr_preds = self.discriminator_to_use.predict(
+                    replay_data.observations, replay_data.actions
+                )
                 critic_loss_weights = rollout_discr_preds
                 # Also for the demonstrated state-action pairs, just for logs
-                expert_discr_preds = self.discriminator.predict(
+                expert_discr_preds = self.discriminator_to_use.predict(
                     expert_observations, self.scale_and_clamp_demo_actions(expert_actions)
                 )
                 # Keep logs
@@ -764,6 +780,11 @@ class SAC(ABC):
                 polyak_update(self.critic.parameters(), self.critic_target.parameters(), self.tau)
                 # Copy running stats, see GH issue #996
                 polyak_update(self.batch_norm_stats, self.batch_norm_stats_target, 1.0)
+
+            # Update target Discriminator
+            if self.w_target_discriminator is True and gradient_step % self.discriminator_target_update_interval == 0:
+                polyak_update(self.discriminator.parameters(), self.discriminator_target.parameters(), self.discriminator_tau)
+                polyak_update(self.discriminator_batch_norm_stats, self.discriminator_batch_norm_stats_target, 1.0)
 
         constraint_policy_loss_term_values_mean = np.nan
         constraint_policy_loss_nll_term_values_mean = np.nan

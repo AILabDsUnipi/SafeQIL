@@ -12,7 +12,8 @@ SAC:
   tau: 0.005  # factor for polyak update of target networks
   alpha: 0.0003  # actor lr
   beta: 0.0003  # critic lr
-  target_entropy: "auto"  # "auto", "auto_<float>", or float. In continuous case, there is no 'target_entropy_ratio', as opposed to 0.4 in discrete case.
+  target_entropy: "auto"  # "auto", or float. In continuous case, there is no 'target_entropy_ratio', as opposed to 0.4 in discrete case.
+  init_entropy_coef: "auto"  # "auto", "auto_<float>", or float.
   entropy_coefficient_lr: 0.0003  # In continuous case, the same lr with the networks is suggested, as opposed to 0.002 in discrete case.
   target_update_interval: 1  # how many gradient steps of online networks to perform before updating the target networks.
   use_sde: True  # Generalized State-Dependent Exploration
@@ -21,7 +22,7 @@ SAC:
   start_steps: 300  # 10000 # how many steps to collect transitions before learning starts
   num_steps: 4000  # 1000000 # Total environment steps. 'None' or integer. If 'None', specify 'n_episodes' or 'n_train_episodes'.
   buffer_memory_size: 1000000
-  update_every_steps: 1  # Steps interval between two consecutive NN updates
+  update_every_steps: 8  # 1 # Steps interval between two consecutive NN updates
   gradient_steps: 1  # How many steps to perform when updating
   clip_grad_norm: False
   max_grad_norm: 5

@@ -167,15 +167,17 @@ class SACExperiment(TrainExperiment):
             if self.done:
                 self.i_train_episode += 1
 
-            # Update networks' parameters
-            training_returns = self.train_networks()
+            if self.total_steps % self.update_every_steps == 0:
 
-            # Store train metrics
-            for key, value in training_returns.items():
-                if key not in list(self.train_logs_cur_game_dict.keys()):
-                    self.train_logs_cur_game_dict[key] = []
-                if value is not np.nan:
-                    self.train_logs_cur_game_dict[key].append(value)
+                # Update networks' parameters
+                training_returns = self.train_networks()
+
+                # Store train metrics
+                for key, value in training_returns.items():
+                    if key not in list(self.train_logs_cur_game_dict.keys()):
+                        self.train_logs_cur_game_dict[key] = []
+                    if value is not np.nan:
+                        self.train_logs_cur_game_dict[key].append(value)
 
     def train_mode(self):
         """

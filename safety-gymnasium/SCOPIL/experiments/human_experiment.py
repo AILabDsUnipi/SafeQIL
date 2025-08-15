@@ -19,9 +19,6 @@ class HumanExperiment(BaseExperiment):
 
         super().__init__(environment, agent, config, file_results_dir, seed)
 
-        # Check config
-        assert 'NO_ALGO' in list(config.items())[1], "'NO_ALGO' is not listed in the config file!"
-
         # Freeze motion
         self.freeze_motion = self.config['Experiment']['freeze_motion']
         assert not self.freeze_motion or (self.freeze_motion and self.algo is None)

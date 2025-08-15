@@ -19,8 +19,8 @@ def capture_img_from_env_rendering(env, new_image_shape=(256, 256), show_final_i
     # Flip the image upside down
     img = cv2.flip(img, 0)
     # Check image dimensions
-    assert img.shape == (484, 960, 3), f"image shape: {img.shape}"
-    img = img[:, 238:-238]  # 960-484=476, 476/2=238
+    assert img.shape == (472, 960, 3), f"image shape: {img.shape}"
+    img = img[:, 244:-244]  # 960-472=488, 488/2=244
     # Resize the image to 256x256 pixels
     img = cv2.resize(img, new_image_shape)
 

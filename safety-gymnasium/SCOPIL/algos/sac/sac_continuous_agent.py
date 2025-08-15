@@ -78,16 +78,14 @@ class SAC(ABC):
             self.tau: float = self.config['SAC']['tau']
             self.gamma: float = self.config['SAC']['gamma']
             self.gradient_steps: int = self.config['SAC']['gradient_steps']
-            self.train_freq: int = self.config['SAC']['update_every_steps']
             # Used for gSDE only
-            self.sde_sample_freq: int = self.config['SAC']['sde_sample_freq']
             self.use_sde_at_warmup: bool = self.config['SAC']['use_sde_at_warmup']
             # Entropy coefficient / Entropy temperature
             # Inverse of the reward scale
             self.target_entropy: Union[float, str] = self.config['SAC']['target_entropy']
             self.log_ent_coef: Optional[th.Tensor] = None
             self.ent_coef_tensor: Optional[th.Tensor] = None
-            self.ent_coef: Union[float, str] = "auto"
+            self.ent_coef: Union[float, str] = self.config['SAC']['init_entropy_coef']
             self.ent_coef_optimizer: Optional[th.optim.Adam] = None
             self.target_update_interval = self.config['SAC']['target_update_interval']
             # Constraints' optimization

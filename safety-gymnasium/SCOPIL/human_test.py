@@ -40,7 +40,7 @@ def main(argv):
     seed = get_test_seed(config)
 
     # Create the directories for files and plots of this experiment
-    files_dir, plot_dir = get_result_dirs(argv[1], argv[0])
+    files_dir, plot_dir, exp_id = get_result_dirs(argv[1], argv[0], test_only=True, seed=seed)
 
     # Create the experiment
     experiment = Experiment(env, None, config=config, file_results_dir=files_dir, seed=seed)

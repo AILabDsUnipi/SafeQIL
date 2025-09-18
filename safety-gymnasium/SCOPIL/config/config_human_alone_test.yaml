@@ -1,5 +1,10 @@
 game:
-    env_id: "SafetyPointGoal1Debug-v0"
+    # Options (we used):
+    # - 'SafetyPointGoal1Debug-v0',
+    # - 'SafetyCarButton1Debug-v0',
+    # - 'SafetyCarPush2Debug-v0',
+    # - 'SafetyPointCircle2Debug-v0'
+    env_id: "SafetyPointCircle2Debug-v0"
 
 Experiment:
 

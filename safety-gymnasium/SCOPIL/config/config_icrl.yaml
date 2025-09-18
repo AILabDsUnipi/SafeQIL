@@ -76,6 +76,6 @@ Experiment:
   torch_threads: 1
   
 # Different configs found in the paper (https://arxiv.org/pdf/2011.09999):
-# 1) batch_size=64, target_kl=0.01, lr=0.0003, reward_gae_lambda=0.95, lambda_initial_value=1.0, lambda_lr=0.1, constraint_net_layer1_size=20, constraint_net_layer2_size=None, constraint_net_cn_lr=0.01, constraint_net_regularizer_coeff=0.5, backward_n_rollouts=1
-# 2) same as (1) but with backward_n_rollouts=10
-# 3) batch_size=128, target_kl=0.01, lr=0.00003, reward_gae_lambda=0.9, lambda_initial_value=0.1, lambda_lr=1.0, constraint_net_layer1_size=40, constraint_net_layer2_size=40, constraint_net_cn_lr=0.01, constraint_net_regularizer_coeff=0.6, backward_n_rollouts=45
+# 1) forward_steps=200000, n_iters=30, batch_size=64, target_kl=0.01, lr=0.0003, reward_gae_lambda=0.95, lambda_initial_value=1.0, lambda_lr=0.1, constraint_net_layer1_size=20, constraint_net_layer2_size=None, constraint_net_cn_lr=0.01, constraint_net_regularizer_coeff=0.5, backward_n_rollouts=10
+# 2) forward_steps=50000, n_iters=10, batch_size=64, target_kl=0.01, lr=0.0003, reward_gae_lambda=0.95, lambda_initial_value=1.0, lambda_lr=0.1, constraint_net_layer1_size=20, constraint_net_layer2_size=None, constraint_net_cn_lr=0.01, constraint_net_regularizer_coeff=0.5, backward_n_rollouts=1
+# 3) forward_steps=200000, n_iters=20, batch_size=128, target_kl=0.01, lr=0.00003, reward_gae_lambda=0.9, lambda_initial_value=0.1, lambda_lr=1.0, constraint_net_layer1_size=40, constraint_net_layer2_size=40, constraint_net_cn_lr=0.01, constraint_net_regularizer_coeff=0.6, backward_n_rollouts=45

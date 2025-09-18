@@ -1,7 +1,13 @@
 import safety_gymnasium
 import cv2
 
-env_id = 'SafetyPointGoal1-v0'
+
+# Options (we used):
+# - 'SafetyPointGoal1Debug-v0',
+# - 'SafetyCarButton1Debug-v0',
+# - 'SafetyCarPush2Debug-v0',
+# - 'SafetyPointCircle2Debug-v0'
+env_id = 'SafetyPointCircle2Debug-v0'
 env = safety_gymnasium.make(env_id, render_mode="rgb_array")
 
 obs, info = env.reset(seed=0)

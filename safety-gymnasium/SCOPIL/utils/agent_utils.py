@@ -75,13 +75,9 @@ class ICRLAg(object):
         # Set the randomness here before creating the networks
         set_random_seed(seed, using_cuda=device.type == th.device("cuda").type)
 
-        ## Define the PPO agent
-        # Create an 'ICRL' field and copy the 'VICRL' since 'ContinuousPPOAgent'
-        # gets the hyperparameters from 'ICRL' field
-        tmp_config = {'ICRL': copy.deepcopy(config['VICRL'])}
-        # PPO agent
+        # Define the PPO agent
         self.ppo = ContinuousPPOAgent(
-            config=tmp_config,
+            config=config,
             observation_space=observation_space,
             action_space=action_space,
             only_test=only_test,
@@ -190,6 +186,9 @@ class VICRLAg(ICRLAg):
             seed
     ):
 
+        # Create an 'ICRL' field and copy the 'VICRL' since 'ContinuousPPOAgent'
+        # gets the hyperparameters from 'ICRL' field
+        config = {'ICRL': copy.deepcopy(config['VICRL'])}
         super(VICRLAg, self).__init__(
             config,
             observation_space,

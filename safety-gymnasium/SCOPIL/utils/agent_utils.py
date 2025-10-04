@@ -188,7 +188,7 @@ class VICRLAg(ICRLAg):
 
         # Create an 'ICRL' field and copy the 'VICRL' since 'ContinuousPPOAgent'
         # gets the hyperparameters from 'ICRL' field
-        config = {'ICRL': copy.deepcopy(config['VICRL'])}
+        config['ICRL'] = copy.deepcopy(config['VICRL'])
         super(VICRLAg, self).__init__(
             config,
             observation_space,

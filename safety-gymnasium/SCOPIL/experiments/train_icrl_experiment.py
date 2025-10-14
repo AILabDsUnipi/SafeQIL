@@ -24,6 +24,7 @@ class ICRLExperiment(TrainExperiment):
         self.n_steps: int = config['ICRL']['n_steps']
         self.backward_n_rollouts: int = config['ICRL']['backward_n_rollouts']
         self.backward_iterations: int = config['ICRL']['backward_iterations']
+        self.w_constraint_optimization: bool = config['ICRL']['w_constraint_optimization']
 
         # Placeholders
         self.current_progress_remaining = 1
@@ -127,44 +128,46 @@ class ICRLExperiment(TrainExperiment):
 
             ###### End of PPO episodes for the current iteration ######
 
-            observations_bw, actions_bw, lengths_bw = [], [], []
+            if self.w_constraint_optimization is True:
 
-            # Loop of backward episodes to collect samples for training the constraint-net
-            for bw_games in tqdm(range(self.backward_n_rollouts), desc='Backward game: '):
+                observations_bw, actions_bw, lengths_bw = [], [], []
 
-                self.eval_mode()
-                done_bw, step_counter_bw = False, 0
-                observation_bw, info_bw = self.env_reset()
+                # Loop of backward episodes to collect samples for training the constraint-net
+                for bw_games in tqdm(range(self.backward_n_rollouts), desc='Backward game: '):
 
-                # Loop of a game of backward iterations
-                while not done_bw:
+                    self.eval_mode()
+                    done_bw, step_counter_bw = False, 0
+                    observation_bw, info_bw = self.env_reset()
 
-                    step_counter_bw += 1
+                    # Loop of a game of backward iterations
+                    while not done_bw:
 
-                    # Get action
-                    action_bw = self.agent.ppo.policy.predict(observation_bw, deterministic=False)
-                    clipped_action_bw = self.agent.clip_action(action_bw)
+                        step_counter_bw += 1
 
-                    # Store samples
-                    observations_bw.append(observation_bw.copy())
-                    actions_bw.append(action_bw.copy())
+                        # Get action
+                        action_bw = self.agent.ppo.policy.predict(observation_bw, deterministic=False)
+                        clipped_action_bw = self.agent.clip_action(action_bw)
 
-                    # Environment step
-                    next_observation_bw, reward_bw, cost_bw, done_bw, truncated_bw, info_bw = \
-                        self.env_step(clipped_action_bw)
+                        # Store samples
+                        observations_bw.append(observation_bw.copy())
+                        actions_bw.append(action_bw.copy())
 
-                    # Make done to be True when hitting the time horizon
-                    if step_counter_bw == self.max_timesteps_per_game:
-                        assert truncated_bw is True, f"'truncated': {truncated_bw}"
-                        done_bw = True
+                        # Environment step
+                        next_observation_bw, reward_bw, cost_bw, done_bw, truncated_bw, info_bw = \
+                            self.env_step(clipped_action_bw)
 
-                    # set the observation for the next step
-                    observation_bw = next_observation_bw.copy()
+                        # Make done to be True when hitting the time horizon
+                        if step_counter_bw == self.max_timesteps_per_game:
+                            assert truncated_bw is True, f"'truncated': {truncated_bw}"
+                            done_bw = True
 
-                lengths_bw.append(step_counter_bw)
+                        # set the observation for the next step
+                        observation_bw = next_observation_bw.copy()
 
-            ##### End of backwards rollouts #####
-            self.train_constraint_net(observations_bw, actions_bw, lengths_bw)
+                    lengths_bw.append(step_counter_bw)
+
+                ##### End of backwards rollouts #####
+                self.train_constraint_net(observations_bw, actions_bw, lengths_bw)
 
         ####### End of experiment #######
 

@@ -42,6 +42,7 @@ class ContinuousPPOAgent(object):
         self.lambda_initial_value: float = 1.0
         self.alpha_cost = None
         self.lambda_lr = None
+        self.w_constraint_optimization: bool = config['ICRL']['w_constraint_optimization']
 
         if self.only_test is False:
             self.lr: float = config['ICRL']['lr']
@@ -107,9 +108,10 @@ class ContinuousPPOAgent(object):
         all_total_losses = []
         all_clip_fractions = []
         all_total_policy_losses = []
-        all_cost_advantages_ratio_terms = []
-        all_cost_losses = []
-        all_cost_value_losses = []
+        if self.w_constraint_optimization is True:
+            all_cost_advantages_ratio_terms = []
+            all_cost_losses = []
+            all_cost_value_losses = []
 
         # Perform 'n_epochs' gradient steps
         early_stop_epoch = self.n_epochs
@@ -121,9 +123,10 @@ class ContinuousPPOAgent(object):
             total_losses = []
             clip_fractions = []
             total_policy_losses = []
-            cost_advantages_ratio_terms = []
-            cost_losses = []
-            cost_value_losses = []
+            if self.w_constraint_optimization is True:
+                cost_advantages_ratio_terms = []
+                cost_losses = []
+                cost_value_losses = []
 
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
@@ -141,8 +144,9 @@ class ContinuousPPOAgent(object):
                 # Normalize reward advantages
                 reward_advantages = rollout_data.reward_advantages - rollout_data.reward_advantages.mean()
                 reward_advantages /= (rollout_data.reward_advantages.std() + 1e-8)
-                # Center but NOT rescale cost advantages
-                cost_advantages = rollout_data.cost_advantages - rollout_data.cost_advantages.mean()
+                if self.w_constraint_optimization is True:
+                    # Center but NOT rescale cost advantages
+                    cost_advantages = rollout_data.cost_advantages - rollout_data.cost_advantages.mean()
 
                 # The ratio between the old and the new policy should be 1 at the first iteration
                 ratio = th.exp(log_prob - rollout_data.old_log_prob)
@@ -157,20 +161,22 @@ class ContinuousPPOAgent(object):
                 total_policy_loss = policy_loss
 
                 # Add cost to loss
-                assert len(cost_advantages.shape) == 1 and cost_advantages.shape[0] == self.batch_size
-                current_lambda = self.dual.nu().item()
-                cost_advantages_ratio_term = th.mean(cost_advantages * ratio)
-                cost_loss = current_lambda * cost_advantages_ratio_term
-                total_policy_loss += cost_loss
-                total_policy_loss /= (1 + current_lambda)
+                if self.w_constraint_optimization is True:
+                    assert len(cost_advantages.shape) == 1 and cost_advantages.shape[0] == self.batch_size
+                    current_lambda = self.dual.nu().item()
+                    cost_advantages_ratio_term = th.mean(cost_advantages * ratio)
+                    cost_loss = current_lambda * cost_advantages_ratio_term
+                    total_policy_loss += cost_loss
+                    total_policy_loss /= (1 + current_lambda)
 
                 # Policy Logs
                 policy_losses.append(policy_loss_for_logs)
                 clip_fraction = th.mean((th.abs(ratio - 1) > self.clip_range).float()).item()
                 clip_fractions.append(clip_fraction)
                 total_policy_losses.append(total_policy_loss.item())
-                cost_advantages_ratio_terms.append(cost_advantages_ratio_term.item())
-                cost_losses.append(cost_loss.item())
+                if self.w_constraint_optimization is True:
+                    cost_advantages_ratio_terms.append(cost_advantages_ratio_term.item())
+                    cost_losses.append(cost_loss.item())
 
                 ## Value loss using the TD(gae_lambda) target
                 # Rewards
@@ -187,16 +193,17 @@ class ContinuousPPOAgent(object):
                 reward_value_loss = F.mse_loss(rollout_data.reward_returns, reward_values)
                 reward_value_losses.append(reward_value_loss.item())
                 # Costs
-                assert (
-                        len(cost_values.shape) == 2 and
-                        cost_values.shape[0] == self.batch_size and
-                        cost_values.shape[1] == 1
-                )
-                assert len(rollout_data.cost_returns.size()) == 1 and \
-                       rollout_data.cost_returns.size(0) == self.batch_size
-                cost_values = cost_values.squeeze(1)
-                cost_value_loss = F.mse_loss(rollout_data.cost_returns, cost_values)
-                cost_value_losses.append(cost_value_loss.item())
+                if self.w_constraint_optimization is True:
+                    assert (
+                            len(cost_values.shape) == 2 and
+                            cost_values.shape[0] == self.batch_size and
+                            cost_values.shape[1] == 1
+                    )
+                    assert len(rollout_data.cost_returns.size()) == 1 and \
+                           rollout_data.cost_returns.size(0) == self.batch_size
+                    cost_values = cost_values.squeeze(1)
+                    cost_value_loss = F.mse_loss(rollout_data.cost_returns, cost_values)
+                    cost_value_losses.append(cost_value_loss.item())
 
                 # Entropy loss favors exploration
                 assert entropy is not None
@@ -205,9 +212,10 @@ class ContinuousPPOAgent(object):
 
                 loss = (
                         total_policy_loss +
-                        (self.reward_vf_coef * reward_value_loss) +
-                        (self.cost_vf_coef * cost_value_loss)
+                        (self.reward_vf_coef * reward_value_loss)
                 )
+                if self.w_constraint_optimization is True:
+                    loss += self.cost_vf_coef * cost_value_loss
 
                 # Compute gradients
                 self.policy.optimizer.zero_grad()
@@ -231,9 +239,10 @@ class ContinuousPPOAgent(object):
             all_total_losses.append(total_losses)
             all_clip_fractions.append(clip_fractions)
             all_total_policy_losses.append(total_policy_losses)
-            all_cost_advantages_ratio_terms.append(cost_advantages_ratio_terms)
-            all_cost_losses.append(cost_losses)
-            all_cost_value_losses.append(cost_value_losses)
+            if self.w_constraint_optimization is True:
+                all_cost_advantages_ratio_terms.append(cost_advantages_ratio_terms)
+                all_cost_losses.append(cost_losses)
+                all_cost_value_losses.append(cost_value_losses)
 
             if self.target_kl is not None and np.mean(approx_kl_divs) > 1.5 * self.target_kl:
                 early_stop_epoch = epoch
@@ -242,9 +251,10 @@ class ContinuousPPOAgent(object):
 
         ## End of policy train
         # Update dual variable using original (unnormalized) cost
-        average_cost = np.mean(self.rollout_buffer.costs[:self.rollout_buffer.pos])
-        all_cost_per_step = self.rollout_buffer.costs[:self.rollout_buffer.pos].tolist()  # for logs
-        self.dual.update_parameter(torch.from_numpy(np.array([average_cost])).to(self.device))
+        if self.w_constraint_optimization is True:
+            average_cost = np.mean(self.rollout_buffer.costs[:self.rollout_buffer.pos])
+            all_cost_per_step = self.rollout_buffer.costs[:self.rollout_buffer.pos].tolist()  # for logs
+            self.dual.update_parameter(torch.from_numpy(np.array([average_cost])).to(self.device))
 
         # Extra logs
         mean_reward_advantages = np.mean(self.rollout_buffer.reward_advantages[:self.rollout_buffer.pos])
@@ -256,15 +266,16 @@ class ContinuousPPOAgent(object):
         )
 
         # Extra cost logs
-        mean_cost_advantages = np.mean(self.rollout_buffer.cost_advantages[:self.rollout_buffer.pos])
-        assert (np.isnan(self.rollout_buffer.cost_returns[self.rollout_buffer.pos:])).all()
-        assert (np.isnan(self.rollout_buffer.cost_values[self.rollout_buffer.pos:])).all()
-        explained_cost_var = self.explained_variance(
-            self.rollout_buffer.cost_returns[:self.rollout_buffer.pos],
-            self.rollout_buffer.cost_values[:self.rollout_buffer.pos]
-        )
-        dual_nu = self.dual.nu().item()
-        dual_loss = self.dual.loss.item()
+        if self.w_constraint_optimization is True:
+            mean_cost_advantages = np.mean(self.rollout_buffer.cost_advantages[:self.rollout_buffer.pos])
+            assert (np.isnan(self.rollout_buffer.cost_returns[self.rollout_buffer.pos:])).all()
+            assert (np.isnan(self.rollout_buffer.cost_values[self.rollout_buffer.pos:])).all()
+            explained_cost_var = self.explained_variance(
+                self.rollout_buffer.cost_returns[:self.rollout_buffer.pos],
+                self.rollout_buffer.cost_values[:self.rollout_buffer.pos]
+            )
+            dual_nu = self.dual.nu().item()
+            dual_loss = self.dual.loss.item()
 
         # Define the returns
         training_returns = {
@@ -278,17 +289,18 @@ class ContinuousPPOAgent(object):
             "ppo_explained_reward_var": explained_reward_var.item(),
             "ppo_early_stop_epoch": early_stop_epoch,
             "ppo_total_policy_loss": np.mean(all_total_policy_losses).item(),
-            "ppo_dual_nu": dual_nu,
-            "ppo_dual_loss": dual_loss,
-            "ppo_cost_value_loss": np.mean(all_cost_value_losses).item(),
-            "ppo_cost_advantage": mean_cost_advantages.item(),
-            "ppo_explained_cost_var": explained_cost_var.item(),
-            "mean_ppo_cost_per_step": np.mean(all_cost_per_step).item(),
-            "min_ppo_cost_per_step": np.min(all_cost_per_step).item(),
-            "max_ppo_cost_per_step": np.max(all_cost_per_step).item(),
-            "ppo_cost_advantage_ratio_term": np.mean(all_cost_advantages_ratio_terms).item(),
-            "ppo_cost_loss": np.mean(all_cost_losses).item()
         }
+        if self.w_constraint_optimization is True:
+            training_returns["ppo_dual_nu"] = dual_nu
+            training_returns["ppo_dual_loss"] = dual_loss
+            training_returns["ppo_cost_value_loss"] = np.mean(all_cost_value_losses).item()
+            training_returns["ppo_cost_advantage"] = mean_cost_advantages.item()
+            training_returns["ppo_explained_cost_var"] = explained_cost_var.item()
+            training_returns["mean_ppo_cost_per_step"] = np.mean(all_cost_per_step).item()
+            training_returns["min_ppo_cost_per_step"] = np.min(all_cost_per_step).item()
+            training_returns["max_ppo_cost_per_step"] = np.max(all_cost_per_step).item()
+            training_returns["ppo_cost_advantage_ratio_term"] = np.mean(all_cost_advantages_ratio_terms).item()
+            training_returns["ppo_cost_loss"] = np.mean(all_cost_losses).item()
         return training_returns
 
     @staticmethod
@@ -324,14 +336,15 @@ class ContinuousPPOAgent(object):
         )
         torch.save(self.policy.state_dict(), path_to_save_ppo_nets)
 
-        path_to_save_ppo_dualvar = os.path.join(path, f'{prefix_model_name}_ppo_dualVar.pt')
-        print(
-            'Saving {} to {} ...'.format(
-                'ppo_dualVar',
-                path_to_save_ppo_dualvar
+        if self.w_constraint_optimization is True:
+            path_to_save_ppo_dualvar = os.path.join(path, f'{prefix_model_name}_ppo_dualVar.pt')
+            print(
+                'Saving {} to {} ...'.format(
+                    'ppo_dualVar',
+                    path_to_save_ppo_dualvar
+                )
             )
-        )
-        torch.save(self.dual.nu.state_dict(), path_to_save_ppo_dualvar)
+            torch.save(self.dual.nu.state_dict(), path_to_save_ppo_dualvar)
 
     def load_models(self, prefix_model_name, path):
 
@@ -346,21 +359,24 @@ class ContinuousPPOAgent(object):
         self.policy.load_state_dict(
             torch.load(
                 path_to_load_ppo_nets,
-                map_location=self.device
+                map_location=self.device,
+                weights_only=False
             )
         )
 
         # Load "ppo_dualVar"
-        path_to_load_ppo_dualvar = os.path.join(path, f'{prefix_model_name}_ppo_dualVar.pt')
-        print(
-            'Loading {} from {} ...'.format(
-                'ppo_dualVar',
-                path_to_load_ppo_dualvar
+        if self.w_constraint_optimization is True:
+            path_to_load_ppo_dualvar = os.path.join(path, f'{prefix_model_name}_ppo_dualVar.pt')
+            print(
+                'Loading {} from {} ...'.format(
+                    'ppo_dualVar',
+                    path_to_load_ppo_dualvar
+                )
             )
-        )
-        self.dual.nu.load_state_dict(
-            torch.load(
-                path_to_load_ppo_dualvar,
-                map_location=self.device
+            self.dual.nu.load_state_dict(
+                torch.load(
+                    path_to_load_ppo_dualvar,
+                    map_location=self.device,
+                    weights_only=False
+                )
             )
-        )

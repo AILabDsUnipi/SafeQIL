@@ -18,6 +18,7 @@ ICRL:
   epochs: 3  # 20 # number of policy, value, and cost networks updates per episode
   clip_range: 0.2
   target_kl: 0.02
+  w_constraint_optimization: True
   constraint_net_layer1_size: 40
   constraint_net_layer2_size: 40
   constraint_net_regularizer_coeff: 0.6
@@ -37,7 +38,7 @@ ICRL:
   constraint_net_importance_sampling: True
 
   # Demonstrations
-  expert_dataset_path: '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/demonstrations'
+  expert_dataset_path: '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointGoal1-v0/human_alone_exp_human_data_simple_w_action_smooth=0.5/tmp/demonstrations'
   load_demos_in_memory: True
   smooth_actions: False
   smooth_factor: 0.99

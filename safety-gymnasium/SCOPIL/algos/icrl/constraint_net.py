@@ -406,6 +406,7 @@ class ConstraintNet(nn.Module):
         self.load_state_dict(
             th.load(
                 path_to_load_constraint_net,
-                map_location=self.device
+                map_location=self.device,
+                weights_only=False
             )
         )

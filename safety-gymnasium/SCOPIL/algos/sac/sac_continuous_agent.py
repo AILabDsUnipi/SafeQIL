@@ -1716,11 +1716,11 @@ class SAC(ABC):
             if self.log_ent_coef is not None:
                 log_ent_coef_path = os.path.join(path, f'{prefix}_sac_log_ent_coef.pt')
                 print('Loading {} from {} ...'.format('log_ent_coef', log_ent_coef_path))
-                self.log_ent_coef = th.load(log_ent_coef_path, device=self.device)
+                self.log_ent_coef = th.load(log_ent_coef_path, device=self.device, weights_only=False)
             else:
                 ent_coef_path = os.path.join(path, f'{prefix}_sac_ent_coef.pt')
                 print('Loading {} from {} ...'.format('ent_coef', ent_coef_path))
-                self.ent_coef_tensor = th.load(ent_coef_path, device=self.device)
+                self.ent_coef_tensor = th.load(ent_coef_path, device=self.device, weights_only=False)
 
             # Load 'constraint_lambda' variable
             if self.w_constraint_optimization is True:
@@ -1731,7 +1731,7 @@ class SAC(ABC):
                 else:
                     constraint_lambda_path = os.path.join(path, f'{prefix}_sac_constraint_lambda.pt')
                     print('Loading {} from {} ...'.format('constraint lambda', constraint_lambda_path))
-                    self.constraint_lambda = th.load(constraint_lambda_path, device=self.device)
+                    self.constraint_lambda = th.load(constraint_lambda_path, device=self.device, weights_only=False)
 
     def set_random_seed(self, seed: Optional[int] = None) -> None:
         """

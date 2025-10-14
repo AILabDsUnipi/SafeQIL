@@ -69,7 +69,8 @@ def main(argv):
 
     # Save the experiment logs and plot them
     save_logs_and_plot(experiment, files_dir, plot_dir)
-    save_constraint_net_logs_and_plot(experiment, files_dir, plot_dir)
+    if config['ICRL']['w_constraint_optimization'] is True:
+        save_constraint_net_logs_and_plot(experiment, files_dir, plot_dir)
     # Save the rest experiment info
     experiment.save_info(files_dir)
 

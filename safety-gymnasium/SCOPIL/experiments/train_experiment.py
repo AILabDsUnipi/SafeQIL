@@ -205,7 +205,7 @@ class TrainExperiment(BaseExperiment):
                 test_game_num_constraint_violation.update({
                     constraint_type: test_game_num_constraint_violation[constraint_type] +
                                      (
-                                         test_info[constraint_type] if constraint_type != 'cost_sum'
+                                         test_info.get(constraint_type, 0) if constraint_type != 'cost_sum'
                                          else
                                          get_cost_sum_from_info_dict(test_info)
                                      )
@@ -296,7 +296,7 @@ class TrainExperiment(BaseExperiment):
         self.constraint_violation.update({
             constraint_type: self.constraint_violation[constraint_type] +
                              (
-                                 self.info[constraint_type] if constraint_type != 'cost_sum'
+                                 self.info.get(constraint_type, 0) if constraint_type != 'cost_sum'
                                  else
                                  get_cost_sum_from_info_dict(self.info)
                              )

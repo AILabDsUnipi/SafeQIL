@@ -1,6 +1,7 @@
 import os
 import yaml
 import pandas as pd
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -161,12 +162,15 @@ def create_test_summary_csv(final_df, save_dir):
 
 def collect_train_data(log_dirs, legends):
     """
-    Reads CSV files in each log_dir's 'train_results/tmp' folder.
+    Reads CSV files and the single YAML config in each log_dir's 'train_results/tmp' folder.
     For each CSV, renames columns <old_col> → <basename>_<old_col>,
     so that overlapping names (like 'Reward') from different files
     become distinct.
     Returns a nested dict:
-      data_by_legend[legend][seed_folder] = [df1, df2, ...]
+    data_by_legend[legend][seed_folder] = {
+          'dfs': [df1, df2, ...],
+          'log_interval': int
+      }
     We do NOT merge these DataFrames, so each CSV remains separate.
     """
 
@@ -181,6 +185,16 @@ def collect_train_data(log_dirs, legends):
 
             train_tmp_dir = os.path.join(exp_path, 'train_results', 'tmp')
             if os.path.isdir(train_tmp_dir):
+
+                # 1. Find and parse the single .yaml file for log_interval
+                yaml_files = [f for f in os.listdir(train_tmp_dir) if f.endswith('.yaml') or f.endswith('.yml')]
+                assert len(yaml_files) == 1, f"Expected one YAML file in {train_tmp_dir}, found: {yaml_files}"
+                config_path = os.path.join(train_tmp_dir, yaml_files[0])
+                with open(config_path, 'r') as f:
+                    conf = yaml.load(f, Loader=yaml.FullLoader)
+                    log_interval = conf['Experiment']['log_interval']
+
+                # 2. Collect CSVs
                 csv_files = [
                     os.path.join(train_tmp_dir, f)
                     for f in os.listdir(train_tmp_dir)
@@ -190,7 +204,7 @@ def collect_train_data(log_dirs, legends):
                 for csv_f in csv_files:
                     df = pd.read_csv(csv_f)
 
-                    # NEW: rename columns to disambiguate
+                    # rename columns to disambiguate
                     base_name = os.path.splitext(os.path.basename(csv_f))[0]
                     rename_dict = {}
                     for c in df.columns:
@@ -201,7 +215,11 @@ def collect_train_data(log_dirs, legends):
                     df_list.append(df)
 
                 if df_list:
-                    data_by_legend[legend][exp_folder] = df_list
+                    # Store both the dataframes and the specific interval for this seed
+                    data_by_legend[legend][exp_folder] = {
+                        'dfs': df_list,
+                        'log_interval': log_interval
+                    }
 
     return data_by_legend
 
@@ -229,7 +247,8 @@ def get_episode_series_for_seed(df_list, y_col='Reward'):
 
 def plot_train_curves(data_by_legend, save_dir):
     """
-    Produces ONE plot per numeric column, overlaid with multiple legends.
+    Produces ONE plot per numeric column, overlaid with multiple legends,
+    only for columns that are COMMON across all legends (Intersection).
     Steps:
       1) Collect the union of all numeric columns across all legends' CSVs.
       2) For each numeric column:
@@ -240,29 +259,63 @@ def plot_train_curves(data_by_legend, save_dir):
            * Compute mean ± std across seeds
            * Plot mean ± std
          - Save figure as 'train_<column>.png'
+    Note that it scales x-axis if column name contains 'per_log_interval' using the
+    log_interval found in the config.
     """
-    # 1) Gather the union of all numeric columns across all legends
-    all_numeric_cols = set()
+
+    mpl.rcParams.update({
+        'axes.labelsize': 20,  # x/y label font. For paper: 20. Otherwise: 11
+        'xtick.labelsize': 18,  # x tick font. For paper: 18. Otherwise: 9
+        'ytick.labelsize': 18,  # y tick font. For paper: 18. Otherwise: 9
+        'legend.fontsize': 20,  # legend font. For paper: 20. Otherwise: 11
+    })
+
+    # 1) Gather the INTERSECTION of numeric columns across all legends
+    common_numeric_cols = None
+
     for legend, seeds_dict in data_by_legend.items():
-        for seed, df_list in seeds_dict.items():
-            for df in df_list:
+        legend_cols = set()
+        for seed, data_packet in seeds_dict.items():
+            for df in data_packet['dfs']:
                 # collect numeric columns
                 numeric_cols = df.select_dtypes(include=[np.number]).columns
-                all_numeric_cols.update(numeric_cols)
+                legend_cols.update(numeric_cols)
 
-    all_numeric_cols = sorted(all_numeric_cols)  # sort for consistent ordering
+        if common_numeric_cols is None:
+            common_numeric_cols = legend_cols
+        else:
+            common_numeric_cols.intersection_update(legend_cols)
 
-    # 2) Generate one plot per numeric column
-    for col in all_numeric_cols:
+    if not common_numeric_cols:
+        print("[WARNING] No common numeric columns found across all methods.")
+        return
+
+    sorted_cols = sorted(common_numeric_cols)  # sort for consistent ordering
+
+    # 2) Generate one plot per common numeric column
+    for col in sorted_cols:
         plt.figure(figsize=(8, 6))
 
-        legend_plotted = False  # track if at least one legend had data for this column
+        # check if this column requires scaling based on the log interval
+        is_interval_metric = 'per_log_interval' in col
+
+        # track if at least one legend had data for this column
+        legend_plotted = False
 
         for legend, seeds_dict in data_by_legend.items():
             # For each legend, gather an array per seed
             all_seeds_arrays = []
-            for seed, df_list in seeds_dict.items():
-                seed_array = get_episode_series_for_seed(df_list, col)
+
+            # We assume 'log_interval' is consistent across seeds of the same legend/method
+            # Get interval from the first available seed
+            current_interval = 1
+            if len(seeds_dict) > 0:
+                first_seed_key = next(iter(seeds_dict))
+                current_interval = seeds_dict[first_seed_key]['log_interval']
+            step_size = current_interval if is_interval_metric else 1
+
+            for seed, data_packet in seeds_dict.items():
+                seed_array = get_episode_series_for_seed(data_packet['dfs'], col)
                 if seed_array.size > 0:
                     all_seeds_arrays.append(seed_array)
 
@@ -273,13 +326,14 @@ def plot_train_curves(data_by_legend, save_dir):
             # Align all seeds by truncating to the shortest run
             min_len = min(len(arr) for arr in all_seeds_arrays)
             trimmed_arrays = [arr[:min_len] for arr in all_seeds_arrays]
-
             data_2d = np.vstack(trimmed_arrays)
+
             # Compute mean ± std across seeds
             mean_vals = data_2d.mean(axis=0)
             std_vals = data_2d.std(axis=0, ddof=1)  # sample std (ddof=1)
 
-            episodes = np.arange(min_len)
+            # Construct X-axis based on the specific step size
+            episodes = np.arange(min_len) * step_size
 
             # Plot
             plt.plot(episodes, mean_vals, label=legend)
@@ -296,11 +350,20 @@ def plot_train_curves(data_by_legend, save_dir):
             plt.close()
             continue
 
+        # Fix the y-axis label and the title
+        col_label_to_use = col
+        if col == 'test_rewards_avg_per_log_interval_Reward':
+            col_label_to_use = 'Reward'
+        elif col == 'test_num_constraint_sum_per_log_interval_Constraint sum':
+            col_label_to_use = 'Cost'
+
         plt.xlabel("Episode")
-        plt.ylabel(col)
-        plt.title(f"Training Curves (mean ± std) — {col}")
+        plt.ylabel(col_label_to_use)
+        if col == col_label_to_use:
+            plt.title(f"Training Curves (mean ± std) — {col}")
         plt.legend(loc='best')
         plt.grid(True)
+        plt.tight_layout()
 
         # Save the figure
         plot_path = os.path.join(save_dir, f"train_{col}.png")

@@ -228,7 +228,7 @@ class ConstraintNet(nn.Module):
                 expert_acts_batch = self.expert_acts[exp_batch_indices]
                 is_batch = is_weights[nom_batch_indices][..., None]
                 if self.constraint_net_importance_sampling is False:
-                    is_batch = th.ones_like(nominal_obs_batch)
+                    is_batch = th.ones(nominal_obs_batch.shape, dtype=th.float32, device=self.device)
 
                 # Make predictions
                 nominal_preds = self.__call__(nominal_obs_batch, nominal_acts_batch)

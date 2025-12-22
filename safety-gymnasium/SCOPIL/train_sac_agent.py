@@ -188,12 +188,6 @@ def main(argv):
     assert not (config['SAC']['w_closest_state_min'] is True and config['SAC']['w_q_values'] is False)
     # Check the consistency between 'w_closest_state_min' and 'w_use_target_critic'
     assert not (config['SAC']['w_closest_state_min'] is True and config['SAC']['w_use_target_critic'] is False)
-    # Check the consistency between 'w_closest_state_min', 'w_max_min' and 'w_expectile_loss'
-    assert not (
-            config['SAC']['w_closest_state_min'] is True and
-            config['SAC']['w_max_min'] is False and
-            config['SAC']['w_expectile_loss'] is False
-    )
     # Check the consistency between 'w_closest_state_min' and 'w_compute_analytically_min_dem_q_value'
     assert not (
             config['SAC']['w_closest_state_min'] is True and

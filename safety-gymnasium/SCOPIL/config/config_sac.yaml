@@ -70,7 +70,7 @@ SAC:
   discriminator_gradient_steps: 1
   discriminator_layer1_size: 32  # number of neurons in the first hidden layer
   discriminator_layer2_size: 32 # number of neurons in the second hidden layer
-  w_target_discriminator: True
+  w_target_discriminator: False
   discriminator_tau: 0.005  # factor for polyak update of target discriminator
   discriminator_target_update_interval: 1  # how many gradient steps of online Discriminator to perform before updating the target Discriminator.
   w_discriminator_icrl_regularization: False

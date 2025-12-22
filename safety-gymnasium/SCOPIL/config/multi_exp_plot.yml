@@ -1,4 +1,4 @@
-## ICRL
+## ICRL ours setting, SafetyPointGoal1-v0
 #log_dirs: [
 #  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.0",
 #  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_reg-coef=0.1",
@@ -28,7 +28,7 @@
 
 
 
-## ICRL setting 1
+## ICRL setting 1, SafetyPointGoal1-v0
 #log_dirs: [
 #  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=1_reg-coef=0.5_results",
 #]
@@ -72,6 +72,64 @@
 
 
 
+## ICRL setting 3, SafetyPointGoal1-v0
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.8_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.7_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.6_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.5_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.4_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.3_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.2_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.1_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.0_results",
+#]
+#
+#legends: [
+#  "reg-coef=0.8",
+#  "reg-coef=0.7",
+#  "reg-coef=0.6",
+#  "reg-coef=0.5",
+#  "reg-coef=0.4",
+#  "reg-coef=0.3",
+#  "reg-coef=0.2",
+#  "reg-coef=0.1",
+#  "reg-coef=0.0",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./icrl_setting=3_multi_exp_results"
+
+
+
+# ICRL setting 7, SafetyPointGoal1-v0
+log_dirs: [
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointGoal1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.8_SafetyPointGoal1-v0_results",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointGoal1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.7_SafetyPointGoal1-v0_results",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointGoal1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.6_SafetyPointGoal1-v0_results",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointGoal1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.5_SafetyPointGoal1-v0_results",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointGoal1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.4_SafetyPointGoal1-v0_results",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointGoal1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.3_SafetyPointGoal1-v0_results",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointGoal1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.2_SafetyPointGoal1-v0_results",
+  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointGoal1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.1_SafetyPointGoal1-v0_results",
+]
+
+legends: [
+  "reg-coef=0.8",
+  "reg-coef=0.7",
+  "reg-coef=0.6",
+  "reg-coef=0.5",
+  "reg-coef=0.4",
+  "reg-coef=0.3",
+  "reg-coef=0.2",
+  "reg-coef=0.1",
+]
+
+test_seed: "2024"
+save_dir: "./icrl_setting=7_multi_exp_results"
+
+
+
 ## ICRL setting 2, SafetyPointCircle2-v0
 #log_dirs: [
 #  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointCircle2-v0/icrl_setting=2_reg-coef=0.8_SafetyPointCircle2-v0_results",
@@ -99,6 +157,34 @@
 #
 #test_seed: "2024"
 #save_dir: "./icrl_setting=2_multi_exp_results"
+
+
+
+## ICRL setting 7, SafetyPointCircle2-v0
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointCircle2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.8_SafetyPointCircle2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointCircle2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.7_SafetyPointCircle2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointCircle2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.6_SafetyPointCircle2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointCircle2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.5_SafetyPointCircle2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointCircle2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.4_SafetyPointCircle2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointCircle2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.3_SafetyPointCircle2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointCircle2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.2_SafetyPointCircle2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyPointCircle2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.1_SafetyPointCircle2-v0_results",
+#]
+#
+#legends: [
+#  "reg-coef=0.8",
+#  "reg-coef=0.7",
+#  "reg-coef=0.6",
+#  "reg-coef=0.5",
+#  "reg-coef=0.4",
+#  "reg-coef=0.3",
+#  "reg-coef=0.2",
+#  "reg-coef=0.1",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./icrl_setting=7_multi_exp_results"
 
 
 
@@ -132,6 +218,34 @@
 
 
 
+## ICRL setting 7, SafetyCarButton1-v0
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarButton1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.8_SafetyCarButton1-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarButton1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.7_SafetyCarButton1-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarButton1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.6_SafetyCarButton1-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarButton1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.5_SafetyCarButton1-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarButton1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.4_SafetyCarButton1-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarButton1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.3_SafetyCarButton1-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarButton1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.2_SafetyCarButton1-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarButton1-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.1_SafetyCarButton1-v0_results",
+#]
+#
+#legends: [
+#  "reg-coef=0.8",
+#  "reg-coef=0.7",
+#  "reg-coef=0.6",
+#  "reg-coef=0.5",
+#  "reg-coef=0.4",
+#  "reg-coef=0.3",
+#  "reg-coef=0.2",
+#  "reg-coef=0.1",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./icrl_setting=7_multi_exp_results"
+
+
+
 ## ICRL setting 2, SafetyCarPush2-v0
 #log_dirs: [
 #  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarPush2-v0/icrl_setting=2_reg-coef=0.8_SafetyCarPush2-v0_results",
@@ -162,17 +276,16 @@
 
 
 
-## ICRL setting 3
+## ICRL setting 7, SafetyCarPush2-v0
 #log_dirs: [
-#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.8_results",
-#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.7_results",
-#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.6_results",
-#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.5_results",
-#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.4_results",
-#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.3_results",
-#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.2_results",
-#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.1_results",
-#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/icrl_setting=3_reg-coef=0.0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarPush2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.8_SafetyCarPush2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarPush2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.7_SafetyCarPush2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarPush2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.6_SafetyCarPush2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarPush2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.5_SafetyCarPush2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarPush2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.4_SafetyCarPush2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarPush2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.3_SafetyCarPush2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarPush2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.2_SafetyCarPush2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/icrl_results/SafetyCarPush2-v0/icrl_setting=7/icrl_setting=7_reg-coef=0.1_SafetyCarPush2-v0_results",
 #]
 #
 #legends: [
@@ -184,11 +297,10 @@
 #  "reg-coef=0.3",
 #  "reg-coef=0.2",
 #  "reg-coef=0.1",
-#  "reg-coef=0.0",
 #]
 #
 #test_seed: "2024"
-#save_dir: "./icrl_setting=3_multi_exp_results"
+#save_dir: "./icrl_setting=7_multi_exp_results"
 
 
 
@@ -830,27 +942,27 @@
 
 
 
-# Ablation, SAC with cosine similarity, with GANs discriminator reward, without entropy in OOD term, without sac term
-log_dirs: [
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/SafetyPointGoal1-v0/ablations/wo_sac_term_w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_wo_sac_term_w_gans_discr_rew_reg_coef=0.05_wo_entr_in_OOD_term_results",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/SafetyPointGoal1-v0/ablations/wo_sac_term_w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_wo_sac_term_w_gans_discr_rew_reg_coef=0.01_wo_entr_in_OOD_term_results",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/SafetyPointGoal1-v0/ablations/wo_sac_term_w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_wo_sac_term_w_gans_discr_rew_reg_coef=0.005_wo_entr_in_OOD_term_results",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/SafetyPointGoal1-v0/ablations/wo_sac_term_w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_wo_sac_term_w_gans_discr_rew_reg_coef=0.001_wo_entr_in_OOD_term_results",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/SafetyPointGoal1-v0/ablations/wo_sac_term_w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_wo_sac_term_w_gans_discr_rew_reg_coef=0.0005_wo_entr_in_OOD_term_results",
-  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/SafetyPointGoal1-v0/ablations/wo_sac_term_w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_wo_sac_term_w_gans_discr_rew_reg_coef=0.0001_wo_entr_in_OOD_term_results",
-]
-
-legends: [
-  "reg-coef=0.05",
-  "reg-coef=0.01",
-  "reg-coef=0.005",
-  "reg-coef=0.001",
-  "reg-coef=0.0005",
-  "reg-coef=0.0001",
-]
-
-test_seed: "2024"
-save_dir: "./ablation_sac_w_cosine_similarity_w_gans_discr_rew_wo_entr_in_OOD_term_wo_sac_term_multi_exp_results"
+## Ablation, SAC with cosine similarity, with GANs discriminator reward, without entropy in OOD term, without sac term
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/SafetyPointGoal1-v0/ablations/wo_sac_term_w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_wo_sac_term_w_gans_discr_rew_reg_coef=0.05_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/SafetyPointGoal1-v0/ablations/wo_sac_term_w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_wo_sac_term_w_gans_discr_rew_reg_coef=0.01_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/SafetyPointGoal1-v0/ablations/wo_sac_term_w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_wo_sac_term_w_gans_discr_rew_reg_coef=0.005_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/SafetyPointGoal1-v0/ablations/wo_sac_term_w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_wo_sac_term_w_gans_discr_rew_reg_coef=0.001_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/SafetyPointGoal1-v0/ablations/wo_sac_term_w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_wo_sac_term_w_gans_discr_rew_reg_coef=0.0005_wo_entr_in_OOD_term_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/sac_single_agent_w_constraint_opt_w_q-values/w_cosine_similarity/w_gans_discr_rew_wo_entr_in_OOD_term/SafetyPointGoal1-v0/ablations/wo_sac_term_w_gans_discr_rew_wo_entr_in_OOD_term/sac_w_cosine_similarity_wo_sac_term_w_gans_discr_rew_reg_coef=0.0001_wo_entr_in_OOD_term_results",
+#]
+#
+#legends: [
+#  "reg-coef=0.05",
+#  "reg-coef=0.01",
+#  "reg-coef=0.005",
+#  "reg-coef=0.001",
+#  "reg-coef=0.0005",
+#  "reg-coef=0.0001",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./ablation_sac_w_cosine_similarity_w_gans_discr_rew_wo_entr_in_OOD_term_wo_sac_term_multi_exp_results"
 
 
 
@@ -1295,6 +1407,70 @@ save_dir: "./ablation_sac_w_cosine_similarity_w_gans_discr_rew_wo_entr_in_OOD_te
 #
 #test_seed: "2024"
 #save_dir: "./sac_multi_exp_results"
+
+
+
+## PPO, with different settings, SafetyPointGoal1-v0
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/ppo_results/SafetyPointGoal1-v0/PPO_w_icrl_setting=2_SafetyPointGoal1-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/ppo_results/SafetyPointGoal1-v0/PPO_w_icrl_setting=7_SafetyPointGoal1-v0_results"
+#]
+#
+#legends: [
+#  "PPO, setting=2",
+#  "PPO, setting=7",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./ppo_multi_exp_results"
+
+
+
+## PPO, with different settings, SafetyCarButton1-v0
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/ppo_results/SafetyCarButton1-v0/PPO_w_icrl_setting=2_SafetyCarButton1-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/ppo_results/SafetyCarButton1-v0/PPO_w_icrl_setting=7_SafetyCarButton1-v0_results",
+#]
+#
+#legends: [
+#  "PPO, setting=2",
+#  "PPO, setting=7",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./ppo_multi_exp_results"
+
+
+
+## PPO, with different settings, SafetyCarPush2-v0
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/ppo_results/SafetyCarPush2-v0/PPO_w_icrl_setting=2_SafetyCarPush2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/ppo_results/SafetyCarPush2-v0/PPO_w_icrl_setting=7_SafetyCarPush2-v0_results",
+#]
+#
+#legends: [
+#  "PPO, setting=2",
+#  "PPO, setting=7",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./ppo_multi_exp_results"
+
+
+
+## PPO, with different settings, SafetyPointCircle2-v0
+#log_dirs: [
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/ppo_results/SafetyPointCircle2-v0/PPO_w_icrl_setting=2_SafetyPointCircle2-v0_results",
+#  "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/training_results/ppo_results/SafetyPointCircle2-v0/PPO_w_icrl_setting=7_SafetyPointCircle2-v0_results",
+#]
+#
+#legends: [
+#  "PPO, setting=2",
+#  "PPO, setting=7",
+#]
+#
+#test_seed: "2024"
+#save_dir: "./ppo_multi_exp_results"
 
 
 

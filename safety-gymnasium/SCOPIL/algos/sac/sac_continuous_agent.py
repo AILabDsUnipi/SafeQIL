@@ -1231,6 +1231,8 @@ class SAC(ABC):
             target_rollout_q_values = target_rollout_q_values_wo_entropy_wo_reward
         if self.w_discriminator_rewards_in_ood_rl_term is True:
             # Add the Discriminator's estimates as reward signal
+            # TODO: When action is not provided to the Discriminator we should use the estimates for the next state
+            # TODO: as reward. The way we do it now is like taking reward delayed by one step.
             if self.discriminator_reward_function_in_ood_rl_term == 'GAIL':
                 target_rollout_q_values += -torch.log(1-discriminator_rollout_preds)
             elif self.discriminator_reward_function_in_ood_rl_term == 'saturing_GANs_loss':

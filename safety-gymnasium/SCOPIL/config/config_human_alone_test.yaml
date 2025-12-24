@@ -4,7 +4,7 @@ game:
     # - 'SafetyCarButton1Debug-v0',
     # - 'SafetyCarPush2Debug-v0',
     # - 'SafetyPointCircle2Debug-v0'
-    env_id: "SafetyPointCircle2Debug-v0"
+    env_id: "SafetyPointGoal1Debug-v0"
 
 Experiment:
 
@@ -25,6 +25,6 @@ Experiment:
 
   test_model: True # Dummy, just for triggering the right mode
   with_human: True # Human alone, or two humans
-  test_seed: 2023  # None or int
+  test_seed: 2022  # None or int
   debug_: False
   test_window_size_moving_avg: 10

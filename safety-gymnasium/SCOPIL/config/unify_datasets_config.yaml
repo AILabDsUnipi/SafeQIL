@@ -1,0 +1,5 @@
+output_path: "./unified_1_2_human_alone_exp_human_data_simple_w_action_smooth=0.5"
+
+datasets:
+  - "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointGoal1-v0/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/test_results_seed=2023/tmp/demonstrations"
+  - "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointGoal1-v0/human_alone_exp_human_data_simple_w_action_smooth=0.5_2/test_results_seed=2022/tmp/demonstrations"

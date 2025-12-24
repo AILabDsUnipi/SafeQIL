@@ -7,7 +7,8 @@ import torch as th  # Needed in __main__
 
 
 def min_max_obs_values(env_id: str):
-
+    # Note that these are computed based on the first dataset collected for each environment.
+    # If unified datasets are used, these values might need to be updated.
     if env_id == 'SafetyPointGoal1-v0':
         max_obs = np.array([
             3.24462421, 13.7011033, 9.81,       1.46503807, 0.64846094, 0.,
@@ -128,6 +129,8 @@ def normalize_features_func(features, env_id):
 
 def min_max_rew_values(env_id: str):
 
+    # Note that these are computed based on the first dataset collected for each environment.
+    # If unified datasets are used, these values might need to be updated.
     if env_id == 'SafetyPointGoal1-v0':
         max_reward = 1.0278260468214948
         min_reward = -0.02666655807640672
@@ -234,7 +237,7 @@ def stats_discounted_rew_values(env_id: str, normalize_rewards: bool, demonstrat
     else:
         raise ValueError(
             f"Not supported combination!"
-            f"\nEnvironment: {env_id}, gamma: {gamma}."
+            f"\nEnvironment: {env_id}, demonstration id: {demonstration_id}, gamma: {gamma}."
         )
 
     return (

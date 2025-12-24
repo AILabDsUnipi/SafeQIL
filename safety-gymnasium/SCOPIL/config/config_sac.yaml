@@ -4,7 +4,7 @@ game:
   # - 'SafetyCarButton1-v0',
   # - 'SafetyCarPush2-v0',
   # - 'SafetyPointCircle2-v0'
-  env_id: "SafetyPointCircle2-v0"
+  env_id: "SafetyPointGoal1-v0"
   with_human: False  # One or two humans if True
   use_image_obs: False
 
@@ -94,7 +94,7 @@ SAC:
   discriminator_reward_function_in_gail_sac: 'GAIL'  # Options: 'GAIL' (survival bonus), 'saturing_GANs_loss' (per step penalty), 'AIRL' (positive and negative components). From DAC: https://arxiv.org/pdf/1809.02925
 
   # Demonstrations
-  expert_dataset_path: '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointCircle2-v0/human_alone_exp_human_data_simple_w_action_smooth=0.5_1/test_results_seed=2023/tmp/demonstrations'
+  expert_dataset_path: '/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointGoal1-v0/unified_1_2_human_alone_exp_human_data_simple_w_action_smooth=0.5'
   load_demos_in_memory: True
   smooth_actions: False
   smooth_factor: 0.99
@@ -110,8 +110,8 @@ Experiment:
   log_interval: 2 # 5  # print avg reward in the interval
 
   # Games/Steps
-  max_timesteps_per_game: 500 # 1000  # max timesteps per episode in train mode
-  test_max_timesteps_per_game: 500 # 1000  # max steps per episode in test mode
+  max_timesteps_per_game: 1000  # max timesteps per episode in train mode
+  test_max_timesteps_per_game: 1000  # max steps per episode in test mode
   test_max_games: 5 # 40  # print avg test reward in the interval
 
   # Saving

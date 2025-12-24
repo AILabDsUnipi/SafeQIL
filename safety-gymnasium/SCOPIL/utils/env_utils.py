@@ -18,9 +18,11 @@ def capture_img_from_env_rendering(env, new_image_shape=(256, 256), show_final_i
     mujoco.mjr_readPixels(img, None, env.task.viewer.viewport, env.task.viewer.con)
     # Flip the image upside down
     img = cv2.flip(img, 0)
-    # Check image dimensions
-    assert img.shape == (484, 960, 3), f"image shape: {img.shape}"
-    img = img[:, 244:-244]  # 960-484=476, 476/2=238
+    # Crop the image to a square in the center of width
+    img_w = img.shape[1]
+    img_h = img.shape[0]
+    img_half_w = (img_w - img_h) // 2
+    img = img[:, img_half_w:-img_half_w]
     # Resize the image to 256x256 pixels
     img = cv2.resize(img, new_image_shape)
 

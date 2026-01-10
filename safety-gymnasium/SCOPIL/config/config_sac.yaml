@@ -131,6 +131,6 @@ Experiment:
   test_seed: 2024  # None or int
   device: "cpu"  # "cuda" or "cpu"
   torch_threads: 1
-  dataloader_num_workers: 1  # 1 for no multiprocessing, >1 for multiprocessing
+  dataloader_num_workers: 1  # 1 for no multiprocessing, >1 for multiprocessing. If you use CUDA, set to 0.
 
 

@@ -1152,7 +1152,7 @@ class SAC(ABC):
                 closest_dones,
                 closest_next_states,
                 closest_next_actions
-            ) = self.expert_dataset.find_closest_states_batch(rollout_observations)
+            ) = self.expert_dataset.find_closest_states_batch(rollout_observations.to(th.float32))
             closest_rewards = closest_rewards.unsqueeze(1)
             closest_dones = closest_dones.unsqueeze(1)
             closest_next_actions = self.scale_and_clamp_demo_actions(closest_next_actions)

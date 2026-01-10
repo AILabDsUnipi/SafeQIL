@@ -713,7 +713,7 @@ class ExpertDataset(Dataset):
         self.memory_built = True
         print(f"Built in-memory search with {len(self._all_states)} samples.")
 
-    def find_closest_states_batch(self, query_states: np.ndarray):
+    def find_closest_states_batch(self, query_states: th.Tensor):
         """
         Given a batch of query states (shape: (batch_size, obs_dim)),
         find the closest demonstrated state for each query by cosine similarity.
@@ -748,38 +748,38 @@ class ExpertDataset(Dataset):
         if self.search_func == "cosine_sim":
             # Use the raw states (and precalculated norms for the demonstrated states)
             query_states_vector = query_states
-            dem_states_vector = self._all_states
-            dem_states_norms = self._all_states_norms
+            dem_states_vector = th.as_tensor(self._all_states, dtype=th.float32, device=self.device)
+            dem_states_norms = th.as_tensor(self._all_states_norms, dtype=th.float32, device=self.device)
         elif self.search_func == "cosine_sim_w_discr_embed":
-            query_states_vector = self.discriminator.embeddings(
-                th.from_numpy(query_states).to(th.float32).to(self.device)
-            ).detach().cpu().numpy()
+            query_states_vector = self.discriminator.embeddings(query_states)
             dem_states_vector = self.discriminator.embeddings(
-                th.from_numpy(self._all_states).to(th.float32).to(self.device)
-            ).detach().cpu().numpy()
+                th.as_tensor(self._all_states, dtype=th.float32, device=self.device)
+            )
             dem_states_norms = None
         else:
             raise ValueError(f"Search function '{self.search_func}' not supported.")
 
         # 1) Dot products ⇒ shape (B, N)
-        dot_products = query_states_vector @ dem_states_vector.T  # matrix multiplication
+        dot_products = th.mm(query_states_vector, dem_states_vector.T)  # matrix multiplication
 
         # 2) Norm of query states ⇒ shape (B,)
-        query_states_norms = np.linalg.norm(query_states_vector, axis=1) + 1e-8
+        query_states_norms = th.linalg.norm(query_states_vector, ord=2, dim=1) + 1e-8
 
         # 3) Norm of dataset states ⇒ shape (N,)
         if dem_states_norms is None:
-            dem_states_norms = np.linalg.norm(dem_states_vector, axis=1) + 1e-8
+            dem_states_norms = th.linalg.norm(dem_states_vector, ord=2, axis=1) + 1e-8
         # Otherwise, already stored in self._all_states_norms
 
         # 4) Cosine similarity ⇒ shape (B, N)
         #    We expand dimensions so shapes line up in broadcast:
         #      query_states_norms ⇒ shape (B, 1)
         #      dem_states_norms ⇒ shape (1, N)
-        cos_sim = dot_products / (query_states_norms[:, None] * dem_states_norms[None, :])
+        cos_sim = dot_products / (query_states_norms.unsqueeze(1) * dem_states_norms.unsqueeze(0))
 
         # 5) Argmax along axis=1 => shape (B,)
-        best_indices = np.argmax(cos_sim, axis=1)
+        best_indices = th.argmax(cos_sim, dim=1)
+        # Move to CPU for NumPy indexing
+        best_indices = best_indices.cpu().numpy()
 
         # 6) Gather the best for each query
         closest_states = self._all_states[best_indices]  # (B, obs_dim)
@@ -790,12 +790,12 @@ class ExpertDataset(Dataset):
         closest_next_actions = self._all_next_actions[best_indices]  # (B, act_dim)
 
         return (
-            closest_states,
-            closest_actions,
-            closest_rewards,
-            closest_dones,
-            closest_next_states,
-            closest_next_actions
+            th.as_tensor(closest_states, dtype=th.float32, device=self.device),
+            th.as_tensor(closest_actions, dtype=th.float32, device=self.device),
+            th.as_tensor(closest_rewards, dtype=th.float32, device=self.device),
+            th.as_tensor(closest_dones, dtype=th.float32, device=self.device),
+            th.as_tensor(closest_next_states, dtype=th.float32, device=self.device),
+            th.as_tensor(closest_next_actions, dtype=th.float32, device=self.device),
         )
 
 

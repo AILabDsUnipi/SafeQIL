@@ -1152,11 +1152,9 @@ class SAC(ABC):
                 closest_dones,
                 closest_next_states,
                 closest_next_actions
-            ) = self.expert_dataset.find_closest_states_batch(rollout_observations.detach().cpu().numpy())
-            closest_rewards = th.tensor(closest_rewards[:, None], device=self.device, dtype=th.float32)
-            closest_dones = th.tensor(closest_dones[:, None], device=self.device, dtype=th.float32)
-            closest_next_states = th.tensor(closest_next_states, device=self.device, dtype=th.float32)
-            closest_next_actions = th.tensor(closest_next_actions, device=self.device, dtype=th.float32)
+            ) = self.expert_dataset.find_closest_states_batch(rollout_observations)
+            closest_rewards = closest_rewards.unsqueeze(1)
+            closest_dones = closest_dones.unsqueeze(1)
             closest_next_actions = self.scale_and_clamp_demo_actions(closest_next_actions)
             with th.no_grad():  # To speed-up computations
                 closest_next_q_values = th.min(

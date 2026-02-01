@@ -1460,13 +1460,13 @@ class SAC(ABC):
         ) = next(iter(self.expert_train_loader))
 
         return (
-            expert_actions,
-            expert_observations,
-            expert_done,
-            expert_reward,
-            expert_disc_reward,
-            expert_next_actions,
-            expert_next_observations
+            expert_actions.to(self.device),
+            expert_observations.to(self.device),
+            expert_done.to(self.device),
+            expert_reward.to(self.device),
+            expert_disc_reward.to(self.device),
+            expert_next_actions.to(self.device),
+            expert_next_observations.to(self.device)
         )
 
     def pretrain_func(self) -> dict:
@@ -1491,6 +1491,9 @@ class SAC(ABC):
             epoch_probs = []
 
             for expert_actions, expert_observations, *_, in self.expert_train_loader:
+
+                expert_actions = expert_actions.to(self.device)
+                expert_observations = expert_observations.to(self.device)
 
                 # We need to sample because `log_std` may have changed between two gradient steps
                 if self.use_sde:

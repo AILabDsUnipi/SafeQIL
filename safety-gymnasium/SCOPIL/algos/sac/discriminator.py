@@ -128,6 +128,8 @@ class Discriminator(nn.Module):
             rollout_actions = rollout_data.actions
             # From expert data
             expert_actions, expert_observations, *_ = next(iter(self.expert_dataloader))
+            expert_observations = expert_observations.to(self.device)
+            expert_actions = expert_actions.to(self.device)
 
             # Discriminator loss
             rollout_preds = th.sigmoid(self.forward(rollout_observations, rollout_actions))

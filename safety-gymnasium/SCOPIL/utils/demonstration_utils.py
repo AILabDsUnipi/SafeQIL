@@ -618,13 +618,13 @@ class ExpertDataset(Dataset):
                     next_observations = self.normalize_features_func(next_observations)
 
         return (
-            th.from_numpy(actions).to(th.float32).to(self.device),
-            th.from_numpy(observations).to(th.float32).to(self.device),
-            th.from_numpy(np.array(done)).to(th.float32).to(self.device),
-            th.from_numpy(np.array(reward, dtype=np.float32)).to(th.float32).to(self.device),
-            th.from_numpy(np.array(disc_reward, dtype=np.float32)).to(th.float32).to(self.device),
-            th.from_numpy(next_actions).to(th.float32).to(self.device),
-            th.from_numpy(next_observations).to(th.float32).to(self.device),
+            th.from_numpy(actions).to(th.float32),
+            th.from_numpy(observations).to(th.float32),
+            th.from_numpy(np.array(done)).to(th.float32),
+            th.from_numpy(np.array(reward, dtype=np.float32)).to(th.float32),
+            th.from_numpy(np.array(disc_reward, dtype=np.float32)).to(th.float32),
+            th.from_numpy(next_actions).to(th.float32),
+            th.from_numpy(next_observations).to(th.float32),
         )
 
     def get_all_actions_and_observations(self):

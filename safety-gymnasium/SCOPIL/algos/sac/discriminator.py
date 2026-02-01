@@ -68,7 +68,7 @@ class Discriminator(nn.Module):
                     yield x
 
         # Create the infinite iterator once and store it
-        self.expert_iterator = iter(cycle(self.expert_train_loader))
+        self.expert_iterator = iter(cycle(self.expert_dataloader))
 
         self._build_model()
 

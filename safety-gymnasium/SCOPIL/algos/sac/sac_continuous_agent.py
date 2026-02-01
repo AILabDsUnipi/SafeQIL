@@ -266,7 +266,18 @@ class SAC(ABC):
                     shuffle=True,
                     drop_last=drop_last,
                     num_workers=self.config['Experiment']['dataloader_num_workers'],
+                    pin_memory=True,  # CRITICAL: Faster transfer from RAM to GPU
+                    persistent_workers=True  # Keeps workers alive between epochs
                 )
+                # Define a function to iterate over expert data
+                def cycle(iterable):
+                    """Makes a DataLoader iterate indefinitely."""
+                    while True:
+                        for x in iterable:
+                            yield x
+                # Create the infinite iterator once and store it
+                self.expert_iterator = iter(cycle(self.expert_train_loader))
+                # Define the Discriminator
                 if self.w_discriminator is True:
                     self.discriminator = Discriminator(
                         self.observation_space,
@@ -1457,16 +1468,17 @@ class SAC(ABC):
             expert_disc_reward,
             expert_next_actions,
             expert_next_observations
-        ) = next(iter(self.expert_train_loader))
+        ) = next(self.expert_iterator)
 
+        # Use non_blocking=True for speed
         return (
-            expert_actions.to(self.device),
-            expert_observations.to(self.device),
-            expert_done.to(self.device),
-            expert_reward.to(self.device),
-            expert_disc_reward.to(self.device),
-            expert_next_actions.to(self.device),
-            expert_next_observations.to(self.device)
+            expert_actions.to(self.device, non_blocking=True),
+            expert_observations.to(self.device, non_blocking=True),
+            expert_done.to(self.device, non_blocking=True),
+            expert_reward.to(self.device, non_blocking=True),
+            expert_disc_reward.to(self.device, non_blocking=True),
+            expert_next_actions.to(self.device, non_blocking=True),
+            expert_next_observations.to(self.device, non_blocking=True)
         )
 
     def pretrain_func(self) -> dict:
@@ -1492,6 +1504,7 @@ class SAC(ABC):
 
             for expert_actions, expert_observations, *_, in self.expert_train_loader:
 
+                # Transfer data to the specified device
                 expert_actions = expert_actions.to(self.device)
                 expert_observations = expert_observations.to(self.device)
 

@@ -60,6 +60,16 @@ class Discriminator(nn.Module):
         self.w_dac_regularization = w_dac_regularization
         self.dac_regularization_coef = dac_regularization_coef
 
+        # Define a function to iterate over expert data
+        def cycle(iterable):
+            """Makes a DataLoader iterate indefinitely."""
+            while True:
+                for x in iterable:
+                    yield x
+
+        # Create the infinite iterator once and store it
+        self.expert_iterator = iter(cycle(self.expert_train_loader))
+
         self._build_model()
 
     def _build_model(self):
@@ -127,7 +137,7 @@ class Discriminator(nn.Module):
             rollout_observations = rollout_data.observations
             rollout_actions = rollout_data.actions
             # From expert data
-            expert_actions, expert_observations, *_ = next(iter(self.expert_dataloader))
+            expert_actions, expert_observations, *_ = next(self.expert_iterator)
             expert_observations = expert_observations.to(self.device)
             expert_actions = expert_actions.to(self.device)
 

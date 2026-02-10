@@ -1,6 +1,8 @@
-output_path: "./unified_1_2_3_4_human_alone_exp_human_data_simple_w_action_smooth=0.5"
+output_path: "./unified_1_2_3_4_5_6_7_8_human_alone_exp_human_data_simple_w_action_smooth=0.5"
 
 datasets:
-  - "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointGoal1-v0/unified_1_2_human_alone_exp_human_data_simple_w_action_smooth=0.5"
-  - "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointGoal1-v0/human_alone_exp_human_data_simple_w_action_smooth=0.5_3/test_results_seed=2021/tmp/demonstrations"
-  - "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointGoal1-v0/human_alone_exp_human_data_simple_w_action_smooth=0.5_4/test_results_seed=2020/tmp/demonstrations"
+  - "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointCircle2-v0/unified_1_2_3_4_human_alone_exp_human_data_simple_w_action_smooth=0.5"
+  - "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointCircle2-v0/human_alone_exp_human_data_simple_w_action_smooth=0.5_5/test_results_seed=2019/tmp/demonstrations"
+  - "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointCircle2-v0/human_alone_exp_human_data_simple_w_action_smooth=0.5_6/test_results_seed=2018/tmp/demonstrations"
+  - "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointCircle2-v0/human_alone_exp_human_data_simple_w_action_smooth=0.5_7/test_results_seed=2017/tmp/demonstrations"
+  - "/home/georgepap/PycharmProjects/ModelFreeSafeIL/experiments/safety_gymnasium/demonstrations/SafetyPointCircle2-v0/human_alone_exp_human_data_simple_w_action_smooth=0.5_8/test_results_seed=2016/tmp/demonstrations"

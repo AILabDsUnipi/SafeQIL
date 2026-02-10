@@ -75,7 +75,7 @@ def unify_datasets():
             # There is only 1 episode per file.
 
             # Let's inspect the keys to find the episode ID used in this file
-            # We look at 'done' or 'reward' as they are guaranteed to exist based on your provided code
+            # We look at 'done' or 'reward' as they are guaranteed to exist
             sample_key = 'done' if 'done' in data else 'reward'
             if sample_key not in data:
                 raise ValueError(f"Filename '{filename}': Structure unknown (no 'done' or 'reward' key).")

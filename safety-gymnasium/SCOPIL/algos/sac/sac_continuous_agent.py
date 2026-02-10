@@ -266,7 +266,7 @@ class SAC(ABC):
                     shuffle=True,
                     drop_last=drop_last,
                     num_workers=self.config['Experiment']['dataloader_num_workers'],
-                    pin_memory=True,  # CRITICAL: Faster transfer from RAM to GPU
+                    pin_memory=(self.device.type == 'cuda'),  # CRITICAL: Faster transfer from RAM to GPU
                     persistent_workers=True  # Keeps workers alive between epochs
                 )
                 # Define a function to iterate over expert data

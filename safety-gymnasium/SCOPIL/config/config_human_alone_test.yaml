@@ -4,7 +4,7 @@ game:
     # - 'SafetyCarButton1Debug-v0',
     # - 'SafetyCarPush2Debug-v0',
     # - 'SafetyPointCircle2Debug-v0'
-    env_id: "SafetyPointGoal1Debug-v0"
+    env_id: "SafetyPointCircle2Debug-v0"
 
 Experiment:
 
@@ -18,13 +18,13 @@ Experiment:
 
   # Steps
   test_max_games: 40  # print avg reward in the interval
-  test_max_timesteps_per_game: 1000  # max steps per trial
+  test_max_timesteps_per_game: 500  # max steps per trial
 
   # Saving
   save_data_for_plots: False
 
   test_model: True # Dummy, just for triggering the right mode
   with_human: True # Human alone, or two humans
-  test_seed: 2023  # None or int
+  test_seed: 2016  # None or int
   debug_: False
   test_window_size_moving_avg: 10

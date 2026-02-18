@@ -4,14 +4,6 @@ This is the official repository of:
 
 Learning to maintain safety through expert demonstrations in settings with unknown constraints: A Q-learning perspective.
 
-## Installation
-
-We recommend to use `conda` to create a virtual environment and install the required packages.
-
-You can follow the commands provided in the file [install_anaconda.sh](code/install_dependencies/install_anaconda.sh) to install conda.
-
-Next, you can follow the commands provided in the file [install_requirements.sh](code/install_dependencies/install_requirements.sh) to activate the conda environment and install the required packages.
-
 ## Dataset
 
 Coming soon!
@@ -19,6 +11,14 @@ Coming soon!
 ## Supplementary Material
 
 Coming soon!
+
+## Installation
+
+We recommend to use `conda` to create a virtual environment and install the required packages.
+
+You can follow the commands provided in the file [install_anaconda.sh](code/install_dependencies/install_anaconda.sh) to install conda.
+
+Next, you can follow the commands provided in the file [install_requirements.sh](code/install_dependencies/install_requirements.sh) to activate the conda environment and install the required packages.
 
 ## Run
 

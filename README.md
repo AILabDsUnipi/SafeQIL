@@ -10,7 +10,7 @@ Coming soon!
 
 ## Supplementary Material
 
-Coming soon!
+You can find the full paper with the supplementary material [here](http://arxiv.org/abs/2602.23816).
 
 ## Installation
 

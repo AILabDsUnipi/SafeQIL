@@ -265,10 +265,10 @@ def plot_train_curves(data_by_legend, save_dir):
 
     ##############################
     mpl.rcParams.update({
-        'axes.labelsize': 20,  # x/y label font. For paper: 20. Otherwise: 11
-        'xtick.labelsize': 18,  # x tick font. For paper: 18. Otherwise: 9
-        'ytick.labelsize': 18,  # y tick font. For paper: 18. Otherwise: 9
-        'legend.fontsize': 20,  # legend font. For paper: 20. Otherwise: 11
+        'axes.labelsize': 11,  # x/y label font. For paper: 20. Otherwise: 11
+        'xtick.labelsize': 9,  # x tick font. For paper: 18. Otherwise: 9
+        'ytick.labelsize': 9,  # y tick font. For paper: 18. Otherwise: 9
+        'legend.fontsize': 11,  # legend font. For paper: 20. Otherwise: 11
     })
     ##############################
 
@@ -372,16 +372,16 @@ def plot_train_curves(data_by_legend, save_dir):
             plt.title(f"Training Curves (mean ± std) — {col}")
         ##############################
         # For paper where we want to place the legend below the x-axis:
-        leg = plt.legend(
-            loc='lower center',  # Position of the legend's anchor point
-            bbox_to_anchor=(0.5, -0.1),  # Coordinates: (0.5=x-center, -0.1=below x-axis)
-            ncol=3,  # Number of columns (make this equal to your # of labels)
-            frameon=False  # Optional: Removes the box border
-        )
-        for line in leg.get_lines():
-            line.set_linewidth(3.0)
+        # leg = plt.legend(
+        #     loc='lower center',  # Position of the legend's anchor point
+        #     bbox_to_anchor=(0.5, -0.1),  # Coordinates: (0.5=x-center, -0.1=below x-axis)
+        #     ncol=3,  # Number of columns (make this equal to your # of labels)
+        #     frameon=False  # Optional: Removes the box border
+        # )
+        # for line in leg.get_lines():
+        #     line.set_linewidth(3.0)
         # Otherwise:
-        # plt.legend(loc='best')
+        plt.legend(loc='best')
         ##############################
         plt.grid(True)
         plt.tight_layout()

@@ -35,3 +35,8 @@ Next, you can follow the commands provided in the file [install_requirements.sh]
    * Set the `<exp_name>` as you want.
    * The program will create a `<exp_name>/tmp` and a `<exp_name>/plot` folder in the `code/` folder. The `<exp_name>/tmp` folder contains files with information of the experiment. The `<exp_name>/plot` folder contains figures for that experiment.
    * The program will automatically create an identification number after your name on each folder name created
+ 
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

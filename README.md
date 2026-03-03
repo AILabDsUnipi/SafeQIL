@@ -6,7 +6,7 @@ Learning to maintain safety through expert demonstrations in settings with unkno
 
 ## Dataset
 
-You can find our dataset [here](https://huggingface.co/datasets/george22294/SafeQIL-dataset). Follow the provided instructions to download the entire dataset or per task / dataset. 
+You can find our dataset [here](https://huggingface.co/datasets/AILabDsUnipi/SafeQIL-dataset). Follow the provided instructions to download the entire dataset or per task / dataset. 
 
 Then, you have to convert each subset (`x1`, `x2`, etc.) from `.h5` to `.pkl` files. To do so, edit the config file [convert_dataset_config.yaml](code/safeqil_implementation/config/convert_dataset_config.yaml) and run:
 

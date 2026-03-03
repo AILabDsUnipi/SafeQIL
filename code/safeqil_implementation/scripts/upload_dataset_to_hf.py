@@ -9,7 +9,7 @@ api = HfApi()
 
 # 2. Define your repository name
 # Format: "your-hf-username/your-dataset-name"
-repo_id = "george22294/SafeQIL-dataset"
+repo_id = "AILabDsUnipi/SafeQIL-dataset"
 
 # 3. Create the repository (if it doesn't exist yet)
 api.create_repo(repo_id=repo_id, repo_type="dataset", exist_ok=True)

@@ -6,3 +6,4 @@ pandas
 seaborn
 psutil
 tqdm
+h5py

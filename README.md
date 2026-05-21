@@ -1,8 +1,22 @@
-# SafeQIL
+# SafeQIL (Presented at AAMAS 2026)
 
 This is the official repository of:
 
-Learning to maintain safety through expert demonstrations in settings with unknown constraints: A Q-learning perspective.
+[**Learning to maintain safety through expert demonstrations in settings with unknown constraints: A Q-learning perspective**](https://www.ifaamas.org/Proceedings/aamas2026/pdfs/RJIB1203.pdf)
+
+## Citation
+
+If you find this work useful, please consider citing it:
+
+```bibtex
+@inproceedings{papadopoulos2026learning,
+  title={Learning to Maintain Safety Through Expert Demonstrations in Settings with Unknown Constraints: A Q-Learning Perspective},
+  author={Papadopoulos, George and Vouros, George A.},
+  booktitle={Proceedings of the 25th International Conference on Autonomous Agents and Multiagent Systems (AAMAS 2026)},
+  year={2026},
+  publisher={IFAAMAS}
+}
+```
 
 ## Dataset
 
@@ -18,7 +32,7 @@ You can find the full paper with the supplementary material [here](http://arxiv.
 
 ## Installation
 
-We recommend to use `conda` to create a virtual environment and install the required packages.
+We recommend using `conda` to create a virtual environment and install the required packages.
 
 You can follow the commands provided in the file [install_anaconda.sh](code/install_dependencies/install_anaconda.sh) to install conda.
 
